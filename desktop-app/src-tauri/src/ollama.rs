@@ -217,3 +217,102 @@ pub async fn embed_text(model_name: String, prompt: String) -> Result<Vec<f64>, 
         Err("Failed to parse embedding".to_string())
     }
 }
+
+// 1.11 Benchmark runner
+#[derive(Serialize)]
+pub struct BenchmarkResult {
+    pub model: String,
+    pub tokens_per_second: f64,
+}
+
+#[tauri::command]
+pub async fn run_benchmark(model_name: String) -> Result<BenchmarkResult, String> {
+    let client = reqwest::Client::new();
+    
+    // 5 fixed test prompts for benchmarking
+    let prompts = vec![
+        "Explain the importance of privacy in AI.",
+        "Write a short python script to reverse a string.",
+        "Summarize the plot of Romeo and Juliet in three sentences.",
+        "What are the main differences between TCP and UDP?",
+        "Compose a professional email declining a job offer."
+    ];
+    
+    let mut total_eval_duration = 0.0;
+    let mut total_eval_count = 0.0;
+    
+    for prompt in prompts {
+        let req_body = serde_json::json!({
+            "model": model_name,
+            "prompt": prompt,
+            "stream": false
+        });
+
+        let res = client.post("http://localhost:11434/api/generate")
+            .json(&req_body)
+            .send()
+            .await
+            .map_err(|e| format!("Benchmark failed: {}", e))?;
+            
+        let json: Value = res.json().await.map_err(|e| format!("Parsing failed: {}", e))?;
+        
+        let eval_duration: f64 = json.get("eval_duration").and_then(|v| v.as_f64()).unwrap_or(0.0) / 1_000_000_000.0; // Nano to Sec
+        let eval_count: f64 = json.get("eval_count").and_then(|v| v.as_f64()).unwrap_or(0.0);
+        
+        total_eval_duration += eval_duration;
+        total_eval_count += eval_count;
+    }
+    
+    let tokens_per_second = if total_eval_duration > 0.0 {
+        total_eval_count / total_eval_duration
+    } else {
+        0.0
+    };
+    
+    Ok(BenchmarkResult {
+        model: model_name,
+        tokens_per_second,
+    })
+}
+
+// 1.12 Model Switch
+#[tauri::command]
+pub async fn switch_model(app: tauri::AppHandle, state: tauri::State<'_, OllamaState>, model_name: String) -> Result<bool, String> {
+    // Switching model in Ollama is effectively handled by querying it or pulling it if missing.
+    // The UI handles downloading. We can ensure Ollama is alive.
+    let _ = start_ollama(app, state).await?;
+    
+    // Send a warm-up prompt to load the model into memory
+    let client = reqwest::Client::new();
+    let req_body = serde_json::json!({
+        "model": model_name,
+        "prompt": "", // Empty prompt often forces load without generating
+        "stream": false
+    });
+
+    let _res = client.post("http://localhost:11434/api/generate")
+        .json(&req_body)
+        .send()
+        .await
+        .map_err(|e| format!("Model warm-up failed: {}", e))?;
+        
+    Ok(true)
+}
+
+// 1.13 Variable to hold Network Log internally for now
+use std::sync::Mutex;
+pub struct NetworkLog(pub Mutex<Vec<String>>);
+
+#[tauri::command]
+pub fn get_network_activity_log(state: tauri::State<'_, NetworkLog>) -> Result<Vec<String>, String> {
+    let log = state.0.lock().map_err(|_| "Failed to acquire log lock")?;
+    Ok(log.clone())
+}
+
+#[tauri::command]
+pub fn log_network_activity(state: tauri::State<'_, NetworkLog>, activity: String) -> Result<(), String> {
+    // Append to internal log
+    let mut log = state.0.lock().map_err(|_| "Failed to acquire log lock")?;
+    log.push(format!("{} - {}", chrono::Utc::now().to_rfc3339(), activity));
+    Ok(())
+}

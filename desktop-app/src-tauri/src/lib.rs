@@ -35,6 +35,7 @@ pub fn run() {
         .plugin(tauri_plugin_sql::Builder::default().build())
         .plugin(tauri_plugin_opener::init())
         .manage(ollama::OllamaState::default())
+        .manage(ollama::NetworkLog(std::sync::Mutex::new(Vec::new())))
         .invoke_handler(tauri::generate_handler![
             greet, 
             stub_create_collection,
@@ -47,7 +48,11 @@ pub fn run() {
             ollama::list_installed_models,
             ollama::download_model,
             ollama::generate_text,
-            ollama::embed_text
+            ollama::embed_text,
+            ollama::run_benchmark,
+            ollama::switch_model,
+            ollama::get_network_activity_log,
+            ollama::log_network_activity
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
