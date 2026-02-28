@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useCollectionsStore } from '../../store/collections';
 import { ArrowLeft, UploadCloud, FileText, Settings, Plus } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
-import { listen, UnlistenFn } from '@tauri-apps/api/event';
+import { listen } from '@tauri-apps/api/event';
 import { clsx } from 'clsx';
 import { invoke } from '@tauri-apps/api/core';
 import mammoth from 'mammoth';
@@ -19,45 +19,54 @@ export const CollectionDetail: React.FC<Props> = ({ collectionId, onBack }) => {
     );
     const incrementDocCount = useCollectionsStore(state => state.incrementDocCount);
 
+    const [docProgress, setDocProgress] = useState<Record<string, { stage: string; done: number; total: number }>>({});
+    const [documents, setDocuments] = useState<{ path: string; name: string; id: string; status: string }[]>([]);
     const [isHovering, setIsHovering] = useState(false);
-    const [documents, setDocuments] = useState<{ path: string; name: string; status: string }[]>([]);
 
     useEffect(() => {
-        let unlistenDrop: UnlistenFn;
-        let unlistenHover: UnlistenFn;
-        let unlistenCancel: UnlistenFn;
+        const unlistenProgress = listen<{
+            doc_id: string; filename: string; stage: string;
+            chunks_done: number; chunks_total: number; error?: string;
+        }>('indexing-progress', (event) => {
+            const { doc_id, stage, chunks_done, chunks_total } = event.payload;
+            setDocProgress(prev => ({
+                ...prev,
+                [doc_id]: { stage, done: chunks_done, total: chunks_total }
+            }));
+        });
 
-        const setupListeners = async () => {
-            unlistenDrop = await listen<{ paths: string[] }>('tauri://drop', (event) => {
-                setIsHovering(false);
-                handleFiles(event.payload.paths);
-            });
-
-            unlistenHover = await listen('tauri://drop-hover', () => {
-                setIsHovering(true);
-            });
-
-            unlistenCancel = await listen('tauri://drop-cancelled', () => {
-                setIsHovering(false);
-            });
-        };
-
-        setupListeners();
+        const unlistenDrop = listen<{ paths: string[] }>('tauri://drop', (event) => {
+            setIsHovering(false);
+            handleFiles(event.payload.paths);
+        });
+        const unlistenHover = listen('tauri://drop-hover', () => setIsHovering(true));
+        const unlistenCancel = listen('tauri://drop-cancelled', () => setIsHovering(false));
 
         return () => {
-            if (unlistenDrop) unlistenDrop();
-            if (unlistenHover) unlistenHover();
-            if (unlistenCancel) unlistenCancel();
+            unlistenProgress.then(f => f());
+            unlistenDrop.then(f => f());
+            unlistenHover.then(f => f());
+            unlistenCancel.then(f => f());
         };
-    }, [collectionId]);
+    }, []);
 
     if (!collection) return null;
+
+    const statusLabel = (doc_id?: string, fallback?: string): string => {
+        if (doc_id && docProgress[doc_id]) {
+            const { stage, done, total } = docProgress[doc_id];
+            if (stage === 'embedding') return `Embedding ${done}/${total}`;
+            if (stage === 'done') return 'Indexed ✓';
+            return stage.charAt(0).toUpperCase() + stage.slice(1) + '...';
+        }
+        return fallback || 'Queued';
+    };
 
     const handleFiles = async (paths: string[]) => {
         const newDocs = paths.map(p => {
             const parts = p.split(/[\/\\]/);
             const name = parts[parts.length - 1];
-            return { path: p, name, status: 'Processing...' };
+            return { path: p, name, id: '', status: 'Queued' };
         });
         setDocuments(prev => [...prev, ...newDocs]);
 
@@ -67,12 +76,16 @@ export const CollectionDetail: React.FC<Props> = ({ collectionId, onBack }) => {
                     setDocsStatus(doc.path, 'Extracting DOCX...');
                     const bytes = await readFile(doc.path);
                     await mammoth.extractRawText({ arrayBuffer: bytes.buffer });
-                    setDocsStatus(doc.path, 'Chunked (JS)');
+                    setDocsStatus(doc.path, 'Indexed ✓');
                     incrementDocCount(collectionId);
                 } else {
-                    // Send to Rust
-                    await invoke('process_document', { collectionId, filePath: doc.path });
-                    setDocsStatus(doc.path, 'Indexed');
+                    setDocsStatus(doc.path, 'Processing...');
+                    const result = await invoke<{ id: string; chunk_count: number }>('process_and_index_document', {
+                        collectionId,
+                        filePath: doc.path,
+                        embeddingModel: 'nomic-embed-text'
+                    });
+                    setDocsId(doc.path, result.id);
                     incrementDocCount(collectionId);
                 }
             } catch (e: any) {
@@ -84,6 +97,10 @@ export const CollectionDetail: React.FC<Props> = ({ collectionId, onBack }) => {
 
     const setDocsStatus = (path: string, status: string) => {
         setDocuments(prev => prev.map(d => d.path === path ? { ...d, status } : d));
+    };
+
+    const setDocsId = (path: string, id: string) => {
+        setDocuments(prev => prev.map(d => d.path === path ? { ...d, id } : d));
     };
 
     const handlePickFile = async () => {
@@ -167,7 +184,9 @@ export const CollectionDetail: React.FC<Props> = ({ collectionId, onBack }) => {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-4">
-                                        <span className="text-sm font-medium text-accent px-2 py-1 bg-accent/10 rounded">{doc.status}</span>
+                                        <span className={`text-sm font-medium px-2 py-1 rounded ${doc.status.includes('✓') || docProgress[doc.id]?.stage === 'done' ? 'text-green-400 bg-green-400/10' : 'text-accent bg-accent/10'}`}>
+                                            {statusLabel(doc.id, doc.status)}
+                                        </span>
                                     </div>
                                 </div>
                             ))}

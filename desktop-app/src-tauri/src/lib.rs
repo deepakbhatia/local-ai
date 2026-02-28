@@ -56,7 +56,8 @@ pub fn run() {
             ollama::switch_model,
             ollama::get_network_activity_log,
             ollama::log_network_activity,
-            documents::process_document
+            documents::process_document,
+            documents::process_and_index_document
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
