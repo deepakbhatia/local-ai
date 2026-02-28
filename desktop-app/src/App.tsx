@@ -1,5 +1,6 @@
 import { useOnboardingStore } from './store/onboarding';
 import { OnboardingWizard } from './components/onboarding/OnboardingWizard';
+import { Dashboard } from './components/dashboard/Dashboard';
 import './App.css';
 
 function App() {
@@ -9,13 +10,7 @@ function App() {
     return <OnboardingWizard />;
   }
 
-  return (
-    <div className="flex bg-background text-text-primary min-h-screen w-full">
-      <div className="flex-1 flex items-center justify-center p-8 text-center text-text-secondary">
-        Dashboard View coming next...
-      </div>
-    </div>
-  );
+  return <Dashboard />;
 }
 
 export default App;
