@@ -172,24 +172,50 @@ export const CollectionDetail: React.FC<Props> = ({ collectionId, onBack }) => {
                     </div>
                 ) : (
                     <div className="w-full">
-                        <h3 className="text-sm font-medium text-text-muted uppercase tracking-wider mb-4 px-2">Documents ({documents.length})</h3>
+                        <div className="flex justify-between items-center mb-4 px-2">
+                            <h3 className="text-sm font-medium text-text-muted uppercase tracking-wider">
+                                Documents ({documents.length})
+                            </h3>
+                            <span className="text-xs text-text-muted">
+                                {documents.filter(d => d.status === 'Error').length > 0 && (
+                                    <span className="text-red-400">{documents.filter(d => d.status === 'Error').length} failed</span>
+                                )}
+                            </span>
+                        </div>
                         <div className="space-y-2 w-full">
-                            {documents.map((doc, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-4 bg-background border border-border rounded-lg">
-                                    <div className="flex items-center gap-3">
-                                        <FileText size={20} className="text-text-muted" />
-                                        <div>
-                                            <div className="font-medium text-sm">{doc.name}</div>
-                                            <div className="text-xs text-text-muted font-mono">{doc.path}</div>
+                            {documents.map((doc, idx) => {
+                                const isError = doc.status === 'Error';
+                                const isDone = doc.status.includes('✓') || docProgress[doc.id]?.stage === 'done';
+                                const badgeClass = isError
+                                    ? 'text-red-400 bg-red-400/10'
+                                    : isDone
+                                        ? 'text-green-400 bg-green-400/10'
+                                        : 'text-accent bg-accent/10';
+
+                                return (
+                                    <div key={idx} className="flex items-center justify-between p-4 bg-background border border-border rounded-lg group">
+                                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                                            <FileText size={20} className={isError ? 'text-red-400' : 'text-text-muted'} />
+                                            <div className="min-w-0">
+                                                <div className="font-medium text-sm truncate">{doc.name}</div>
+                                                <div className="text-xs text-text-muted font-mono truncate max-w-xs">{doc.path}</div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3 ml-4">
+                                            <span className={`text-sm font-medium px-2 py-1 rounded whitespace-nowrap ${badgeClass}`}>
+                                                {statusLabel(doc.id, doc.status)}
+                                            </span>
+                                            <button
+                                                onClick={() => setDocuments(prev => prev.filter((_, i) => i !== idx))}
+                                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-400/10 hover:text-red-400 rounded text-text-muted text-xs"
+                                                title="Remove"
+                                            >
+                                                ✕
+                                            </button>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-4">
-                                        <span className={`text-sm font-medium px-2 py-1 rounded ${doc.status.includes('✓') || docProgress[doc.id]?.stage === 'done' ? 'text-green-400 bg-green-400/10' : 'text-accent bg-accent/10'}`}>
-                                            {statusLabel(doc.id, doc.status)}
-                                        </span>
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 )}
