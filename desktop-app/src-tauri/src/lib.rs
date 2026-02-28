@@ -43,7 +43,11 @@ pub fn run() {
             stub_query_document,
             hardware::detect_hardware,
             ollama::start_ollama,
-            ollama::check_ollama_status
+            ollama::check_ollama_status,
+            ollama::list_installed_models,
+            ollama::download_model,
+            ollama::generate_text,
+            ollama::embed_text
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

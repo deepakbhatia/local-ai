@@ -27,5 +27,6 @@ lancedb = "0.14"
 tokio = { version = "1", features = ["full"] }
 sysinfo = "0.30"
 tauri-plugin-shell = "2"
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12", features = ["json", "stream"] }
+futures-util = "0.3"
 
