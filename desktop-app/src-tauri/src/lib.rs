@@ -1,4 +1,7 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+
+pub mod hardware;
+
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
@@ -34,7 +37,8 @@ pub fn run() {
             stub_create_collection,
             stub_delete_collection,
             stub_add_document,
-            stub_query_document
+            stub_query_document,
+            hardware::detect_hardware
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
