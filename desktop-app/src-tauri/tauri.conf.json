@@ -13,12 +13,17 @@
     "windows": [
       {
         "title": "LocalMind",
-        "width": 900,
-        "height": 700
+        "width": 1200,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 600
       }
     ],
     "security": {
-      "csp": null
+      "csp": null,
+      "capabilities": [
+        "main-capability"
+      ]
     }
   },
   "bundle": {

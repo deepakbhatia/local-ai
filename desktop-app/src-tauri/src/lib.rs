@@ -2,6 +2,7 @@
 
 pub mod hardware;
 pub mod ollama;
+pub mod documents;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -31,6 +32,8 @@ fn stub_query_document(query: &str, collection_id: &str) -> String {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_sql::Builder::default().build())
         .plugin(tauri_plugin_opener::init())
@@ -52,7 +55,8 @@ pub fn run() {
             ollama::run_benchmark,
             ollama::switch_model,
             ollama::get_network_activity_log,
-            ollama::log_network_activity
+            ollama::log_network_activity,
+            documents::process_document
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
