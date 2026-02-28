@@ -1,0 +1,35 @@
+{
+    "translation": {
+        "app": {
+            "name": "LocalMind",
+            "tagline": "Your documents. Your machine. Your AI."
+        },
+        "onboarding": {
+            "welcome": "Your AI. Your machine. Nothing leaves.",
+            "getStarted": "Get Started",
+            "selectVertical": "Select Your Vertical"
+        },
+        "dashboard": {
+            "documentsIndexed": "Documents Indexed",
+            "collections": "Collections",
+            "questionsAskedToday": "Questions Asked Today",
+            "avgResponseTime": "Avg Response Time"
+        },
+        "askMode": {
+            "offlineBanner": "🔒 100% Offline",
+            "askPlaceholder": "Ask a question...",
+            "sourceNotFound": "Source not found in documents"
+        },
+        "writeMode": {
+            "addDocuments": "Add documents",
+            "aiCommands": "AI Commands"
+        },
+        "settings": {
+            "profile": "Profile",
+            "model": "Model",
+            "vertical": "Vertical",
+            "privacy": "Privacy",
+            "advanced": "Advanced"
+        }
+    }
+}
