@@ -1,10 +1,11 @@
-name: Tauri Build
+name: Build LocalMind
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main]
+    tags: ['v*']
   pull_request:
-    branches: [ "main" ]
+    branches: [main]
 
 jobs:
   build:
@@ -12,36 +13,88 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: "macos-latest"
-            args: ""
-          - platform: "windows-latest"
-            args: ""
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+            ollama_asset: ollama-darwin
+            bin_suffix: aarch64-apple-darwin
+          - platform: macos-13
+            target: x86_64-apple-darwin
+            ollama_asset: ollama-darwin
+            bin_suffix: x86_64-apple-darwin
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            ollama_asset: ollama-windows-amd64.zip
+            bin_suffix: x86_64-pc-windows-msvc
 
     runs-on: ${{ matrix.platform }}
-    defaults:
-      run:
-        working-directory: desktop-app
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install Rust
+      - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.target }}
 
-      - name: Rust Cache
+      - name: Install Rust target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Install protobuf (macOS)
+        if: runner.os == 'macOS'
+        run: brew install protobuf
+
+      - name: Install protobuf (Windows)
+        if: runner.os == 'Windows'
+        run: choco install protoc
+
+      - name: Cache Rust build
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: desktop-app/src-tauri
+          workspaces: './desktop-app/src-tauri -> target'
 
-      - name: Install dependencies
+      # ── Download bundled Ollama binary ──────────────────────────────────
+      - name: Download Ollama binary (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          OLLAMA_VERSION="v0.6.5"
+          mkdir -p desktop-app/src-tauri/binaries
+          curl -L "https://github.com/ollama/ollama/releases/download/${OLLAMA_VERSION}/${{ matrix.ollama_asset }}" \
+            -o "desktop-app/src-tauri/binaries/ollama-${{ matrix.bin_suffix }}"
+          chmod +x "desktop-app/src-tauri/binaries/ollama-${{ matrix.bin_suffix }}"
+
+      - name: Download Ollama binary (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $OLLAMA_VERSION = "v0.6.5"
+          New-Item -ItemType Directory -Force -Path "desktop-app\src-tauri\binaries"
+          Invoke-WebRequest -Uri "https://github.com/ollama/ollama/releases/download/${OLLAMA_VERSION}/${{ matrix.ollama_asset }}" `
+            -OutFile "ollama-windows.zip"
+          Expand-Archive "ollama-windows.zip" -DestinationPath "ollama-extracted"
+          Copy-Item "ollama-extracted\ollama.exe" `
+            "desktop-app\src-tauri\binaries\ollama-${{ matrix.bin_suffix }}.exe"
+
+      # ── Frontend & App build ─────────────────────────────────────────────
+      - name: Install npm dependencies
         run: npm install
+        working-directory: desktop-app
 
-      - name: Build App
-        run: npm run tauri build -- ${{ matrix.args }}
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: desktop-app
+          args: --target ${{ matrix.target }}
+          tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
+          releaseName: 'LocalMind ${{ github.ref_name }}'
+          releaseBody: 'Privacy-first AI desktop app with bundled Ollama'
+          releaseDraft: true
+          includeUpdaterJson: false

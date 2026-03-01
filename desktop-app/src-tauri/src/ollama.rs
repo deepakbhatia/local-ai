@@ -31,11 +31,13 @@ pub async fn start_ollama(app: tauri::AppHandle, state: tauri::State<'_, OllamaS
         return Ok(true);
     }
     
-    let shell = app.shell();
-    let command = shell.command("ollama")
+    // Use bundled sidecar binary — no system Ollama required
+    let sidecar = app.shell()
+        .sidecar("ollama")
+        .map_err(|e| format!("Failed to find ollama sidecar: {}", e))?
         .args(["serve"]);
 
-    let (mut rx, _child) = command.spawn().map_err(|e| e.to_string())?;
+    let (mut rx, _child) = sidecar.spawn().map_err(|e| e.to_string())?;
 
     let is_running_clone = state.is_running.clone();
     
@@ -45,9 +47,13 @@ pub async fn start_ollama(app: tauri::AppHandle, state: tauri::State<'_, OllamaS
         while let Some(event) = rx.recv().await {
             match event {
                 CommandEvent::Terminated(payload) => {
-                    println!("Ollama Terminated with code {:?}", payload.code);
+                    println!("Ollama terminated with code {:?}", payload.code);
                     is_running_clone.store(false, Ordering::Relaxed);
                     break;
+                }
+                CommandEvent::Stderr(line) => {
+                    // Log Ollama's own output for debugging
+                    eprintln!("[ollama] {}", String::from_utf8_lossy(&line));
                 }
                 _ => {}
             }
