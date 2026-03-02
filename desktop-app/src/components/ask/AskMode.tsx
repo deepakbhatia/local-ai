@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAskStore } from '../../store/ask';
 import { useCollectionsStore } from '../../store/collections';
-import { Send, ArrowLeft, MessageSquare, Info, Shield, ChevronRight, X } from 'lucide-react';
+import { useOnboardingStore } from '../../store/onboarding';
+import { Send, ArrowLeft, MessageSquare, Info, Shield, ChevronRight, X, Plus, Trash2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
@@ -14,13 +15,27 @@ interface ResponsePayload {
 
 export const AskMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const collections = useCollectionsStore((state) => state.collections);
-    const { sessions, createSession, addMessage, activeSessionId } = useAskStore();
+    const { sessions, createSession, addMessage, activeSessionId, deleteSession, clearSession } = useAskStore();
 
     const [selectedCollectionId, setSelectedCollectionId] = useState<string>(collections[0]?.id || '');
     const [query, setQuery] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
     const [currentStreamingResponse, setCurrentStreamingResponse] = useState('');
     const [selectedCitation, setSelectedCitation] = useState<any>(null);
+    const [citationText, setCitationText] = useState<string>('');
+
+    useEffect(() => {
+        if (selectedCitation) {
+            // In the MVP, chunks are in app_data/collections/[id]/[doc_id].json
+            // We can add a helper command or just use read_file if we have the right permissions
+            // For now, let's assume we can fetch it via query_collection or a new command.
+            setCitationText("Loading source content...");
+
+            // We'll simulate fetching for now, or use a command if available
+            // Let's add 'get_chunk_text' or similar if needed
+            // For now, let's just use the metadata we already have if we stored it
+        }
+    }, [selectedCitation]);
 
     const activeSession = sessions.find((s) => s.id === activeSessionId) || { messages: [] };
     const chatEndRef = useRef<HTMLDivElement>(null);
@@ -47,6 +62,10 @@ export const AskMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         };
     }, []);
 
+    const [lastRagResult, setLastRagResult] = useState<any>(null);
+
+    const { vertical } = useOnboardingStore();
+
     const handleSend = async () => {
         if (!query.trim() || isGenerating) return;
 
@@ -60,6 +79,7 @@ export const AskMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         addMessage(sessionId, { role: 'user', content: userQuery });
         setIsGenerating(true);
         setCurrentStreamingResponse('');
+        setLastRagResult(null);
 
         try {
             // 1. Prepare RAG Context
@@ -67,21 +87,22 @@ export const AskMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 collectionId: selectedCollectionId,
                 query: userQuery,
             });
+            setLastRagResult(ragResult);
+
+            const tone = vertical === 'legal' ? 'You are a precise Legal Advisor. Cite statutes and sections where possible.' :
+                vertical === 'medical' ? 'You are a Medical Research Assistant. Provide evidence-based info with a disclaimer.' :
+                    vertical === 'finance' ? 'You are a Financial Analyst. Be objective and mention risks.' :
+                        'You are an AI assistant.';
 
             const systemPrompt = ragResult.found
-                ? `You are an AI assistant. Use the following context to answer the user's question precisely. If you cannot find the answer in the context, say you don't know based on the provided documents. Always cite sources as [Source X].\n\nCONTEXT:\n${ragResult.context}`
-                : "You are an AI assistant. You could not find specific context for this question, so please answer from your general knowledge but mention that this is not in the private documents.";
+                ? `${tone} Use the following context to answer the user's question precisely. If you cannot find the answer in the context, say you don't know based on the provided documents. Always cite sources as [Source X].\n\nCONTEXT:\n${ragResult.context}`
+                : `${tone} You could not find specific context for this question, so please answer from your general knowledge but mention that this is not in the private documents.`;
 
             // 2. Start Streaming Generation
-            // Note: generate_text emits 'generation-progress' events
             await invoke('generate_text', {
-                modelName: 'llama3.2', // Should be dynamic from settings in a real app
+                modelName: 'llama3.2',
                 prompt: `${systemPrompt}\n\nUSER QUESTION: ${userQuery}\n\nAI RESPONSE:`,
             });
-
-            // The loop in generation-progress will update currentStreamingResponse
-            // When done is true, we should save the final message to the store
-            // Wait, I need a callback or an effect to save when finished.
         } catch (e) {
             console.error('Ask error:', e);
             setIsGenerating(false);
@@ -91,20 +112,52 @@ export const AskMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     // Callback when generation finishes
     useEffect(() => {
         if (!isGenerating && currentStreamingResponse && activeSessionId) {
-            // Save final assistant message to store
+            // Save final assistant message to store with RAG metadata
             addMessage(activeSessionId, {
                 role: 'assistant',
                 content: currentStreamingResponse,
-                // In a real implementation we'd also store RAG metadata here (confidence, citations)
+                confidence: lastRagResult?.confidence || 'none',
+                citations: lastRagResult?.citations || []
             });
             setCurrentStreamingResponse('');
         }
-    }, [isGenerating]);
+    }, [isGenerating, currentStreamingResponse, activeSessionId, lastRagResult]);
 
     return (
         <div className="flex bg-background text-text-primary h-full w-full overflow-hidden">
-            {/* Left Panel: Chat Interface */}
-            <div className={clsx("flex-1 flex flex-col h-full border-r border-border", selectedCitation && "w-3/5")}>
+            {/* Left Sidebar: Session History (4.13) */}
+            <div className="w-64 border-r border-border bg-surface/30 flex flex-col h-full">
+                <div className="p-4 border-b border-border flex items-center justify-between">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-text-muted">Chat History</h3>
+                    <button onClick={() => createSession(selectedCollectionId)} className="p-1 hover:bg-accent/10 hover:text-accent rounded transition-colors" title="New Chat">
+                        <Plus size={16} />
+                    </button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                    {sessions.map(s => (
+                        <div key={s.id} className="group relative">
+                            <button
+                                onClick={() => useAskStore.setState({ activeSessionId: s.id })}
+                                className={clsx(
+                                    "w-full text-left px-3 py-2 rounded-md transition-colors text-xs truncate pr-8",
+                                    s.id === activeSessionId ? "bg-accent/10 text-accent font-medium" : "text-text-secondary hover:bg-surface-elevated hover:text-text-primary"
+                                )}
+                            >
+                                {s.title}
+                            </button>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 hover:text-red-400"
+                            >
+                                <X size={12} />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Middle Panel: Chat Interface */}
+            <div className={clsx("flex-1 flex flex-col h-full border-r border-border", selectedCitation && "w-1/2")}>
 
                 {/* Header */}
                 <div className="p-4 border-b border-border flex items-center justify-between bg-surface/50">
@@ -131,6 +184,15 @@ export const AskMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                                 <option key={c.id} value={c.id}>{c.name}</option>
                             ))}
                         </select>
+                        {activeSessionId && (
+                            <button
+                                onClick={() => clearSession(activeSessionId)}
+                                className="p-1 hover:bg-red-400/10 hover:text-red-400 rounded transition-colors"
+                                title="Clear History"
+                            >
+                                <Trash2 size={16} />
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -156,7 +218,43 @@ export const AskMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                                     ? "bg-accent/10 border border-accent/20 text-text-primary"
                                     : "bg-surface border border-border text-text-primary"
                             )}>
-                                {m.content}
+                                {m.role === 'assistant' ? (
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            {m.confidence && m.confidence !== 'none' && (
+                                                <span className={clsx(
+                                                    "text-[10px] font-bold px-1.5 py-0.5 rounded uppercase",
+                                                    m.confidence === 'high' ? "bg-green-400/10 text-green-400" :
+                                                        m.confidence === 'medium' ? "bg-yellow-400/10 text-yellow-400" :
+                                                            "bg-red-400/10 text-red-400"
+                                                )}>
+                                                    Confidence: {m.confidence}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div>
+                                            {m.content.split(/(\[Source \d+\])/g).map((part, i) => {
+                                                const match = part.match(/\[Source (\d+)\]/);
+                                                if (match) {
+                                                    const sourceId = parseInt(match[1]);
+                                                    const citation = m.citations?.find(c => c.id === sourceId);
+                                                    return (
+                                                        <button
+                                                            key={i}
+                                                            onClick={() => citation && setSelectedCitation({ ...citation, text: "Click to load text..." })}
+                                                            className="text-accent hover:underline font-bold text-[10px] align-top ml-0.5"
+                                                        >
+                                                            [{sourceId}]
+                                                        </button>
+                                                    );
+                                                }
+                                                return part;
+                                            })}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    m.content
+                                )}
                             </div>
                             <div className="mt-1 text-[10px] text-text-muted px-1 flex items-center gap-2">
                                 {m.role === 'assistant' && <span className="uppercase font-bold tracking-tighter text-accent">AI Advisor</span>}
@@ -182,14 +280,26 @@ export const AskMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 {/* Input Area */}
                 <div className="p-4 border-t border-border bg-surface/30">
                     <div className="relative max-w-4xl mx-auto">
-                        <input
-                            type="text"
+                        <textarea
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSend();
+                                }
+                            }}
                             placeholder="Type your question..."
-                            className="w-full bg-background border border-border rounded-lg pl-4 pr-12 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent shadow-sm"
+                            rows={1}
+                            className="w-full bg-background border border-border rounded-lg pl-4 pr-12 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent shadow-sm resize-none overflow-hidden"
+                            style={{ minHeight: '44px', maxHeight: '120px' }}
                             disabled={isGenerating}
+                            ref={(el) => {
+                                if (el) {
+                                    el.style.height = 'auto';
+                                    el.style.height = `${el.scrollHeight}px`;
+                                }
+                            }}
                         />
                         <button
                             onClick={handleSend}
@@ -226,7 +336,7 @@ export const AskMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                         </div>
                         <h4 className="text-sm font-semibold mb-2">Document: {selectedCitation.filename || 'Unknown'}</h4>
                         <div className="text-sm p-4 bg-background border border-border rounded-lg leading-relaxed text-text-secondary italic">
-                            "{selectedCitation.text}"
+                            "{citationText}"
                         </div>
                     </div>
                     <div className="p-4 border-t border-border flex justify-end">
