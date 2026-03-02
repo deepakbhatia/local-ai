@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useCollectionsStore } from '../../store/collections';
 import { useOnboardingStore } from '../../store/onboarding';
-import { FolderPlus, Book, Settings, LogOut, ChevronRight, FileText } from 'lucide-react';
+import { FolderPlus, Book, Settings, LogOut, ChevronRight, FileText, MessageSquare } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { CollectionDetail } from './CollectionDetail';
+import { AskMode } from '../ask/AskMode';
 
 export const Dashboard: React.FC = () => {
     const collections = useCollectionsStore(state => state.collections);
@@ -41,6 +42,20 @@ export const Dashboard: React.FC = () => {
                         )}
                     >
                         <Book size={18} /> Knowledge Collections
+                    </button>
+
+                    <button
+                        onClick={() => setActiveView('ask')}
+                        className={twMerge(
+                            clsx(
+                                "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm font-medium",
+                                activeView === 'ask'
+                                    ? "bg-accent/10 text-accent"
+                                    : "text-text-secondary hover:bg-surface-elevated hover:text-text-primary"
+                            )
+                        )}
+                    >
+                        <MessageSquare size={18} /> Ask Documents
                     </button>
 
                     <button
@@ -119,6 +134,10 @@ export const Dashboard: React.FC = () => {
                             collectionId={activeView.replace('col:', '')}
                             onBack={() => setActiveView('collections')}
                         />
+                    )}
+
+                    {activeView === 'ask' && (
+                        <AskMode onBack={() => setActiveView('collections')} />
                     )}
 
                     {activeView === 'settings' && (
