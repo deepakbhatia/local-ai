@@ -219,6 +219,144 @@ pub async fn process_and_index_document(
     })
 }
 
+#[tauri::command]
+pub async fn query_collection(
+    app: tauri::AppHandle,
+    collection_id: String,
+    query: String,
+    embedding_model: Option<String>,
+    top_k: Option<u64>,
+) -> Result<Vec<Value>, String> {
+    let model = embedding_model.unwrap_or_else(|| "nomic-embed-text".to_string());
+    let k = top_k.unwrap_or(5);
+
+    // 1. Embed query
+    let query_vector = embed_text_via_ollama(&query, &model).await?;
+
+    // 2. Load all chunks in collection
+    let mut index_dir = app.path().app_data_dir().expect("app data dir");
+    index_dir.push("collections");
+    index_dir.push(&collection_id);
+
+    if !index_dir.exists() {
+        return Ok(vec![]);
+    }
+
+    let mut all_chunks: Vec<Value> = Vec::new();
+    let entries = fs::read_dir(index_dir).map_err(|e| e.to_string())?;
+
+    for entry in entries {
+        if let Ok(file) = entry {
+            if file.path().is_file() && file.path().extension().and_then(|e| e.to_str()) == Some("json") {
+                let content = fs::read_to_string(file.path()).map_err(|e| e.to_string())?;
+                let mut doc_chunks: Vec<Value> = serde_json::from_str(&content)
+                    .map_err(|e| e.to_string())?;
+                all_chunks.append(&mut doc_chunks);
+            }
+        }
+    }
+
+    // 3. Compute cosine similarity and sort
+    let mut search_results: Vec<(f32, Value)> = Vec::new();
+
+    for mut chunk in all_chunks {
+        if let Some(chunk_vector_val) = chunk["vector"].as_array() {
+            let chunk_vector: Vec<f32> = chunk_vector_val.iter()
+                .filter_map(|v| v.as_f64().map(|f| f as f32))
+                .collect();
+
+            if chunk_vector.len() == query_vector.len() {
+                let score = cosine_similarity(&query_vector, &chunk_vector);
+                
+                // Keep track of which score belongs to what
+                if let Some(obj) = chunk.as_object_mut() {
+                    obj.insert("score".to_string(), serde_json::json!(score));
+                }
+                search_results.push((score, chunk));
+            }
+        }
+    }
+
+    search_results.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+
+    // 4. Return top K
+    let results: Vec<Value> = search_results.into_iter()
+        .take(k as usize)
+        .map(|(_, chunk)| chunk)
+        .collect();
+
+    Ok(results)
+}
+
+fn cosine_similarity(v1: &[f32], v2: &[f32]) -> f32 {
+    let dot_product: f32 = v1.iter().zip(v2.iter()).map(|(a, b)| a * b).sum();
+    let norm1: f32 = v1.iter().map(|a| a * a).sum::<f32>().sqrt();
+    let norm2: f32 = v2.iter().map(|a| a * a).sum::<f32>().sqrt();
+
+    if norm1 > 0.0 && norm2 > 0.0 {
+        dot_product / (norm1 * norm2)
+    } else {
+        0.0
+    }
+}
+
+// 4.3 Not-found threshold handling + 4.1 Pipeline
+#[tauri::command]
+pub async fn prepare_rag_context(
+    app: tauri::AppHandle,
+    collection_id: String,
+    query: String,
+) -> Result<Value, String> {
+    // top_k needs to be u64 for tauri invoke (sometimes)
+    let results = query_collection(app, collection_id, query, None, Some(5)).await?;
+    
+    // Threshold 0.35 as per requirements
+    let threshold = 0.35;
+    let filtered_results: Vec<&Value> = results.iter()
+        .filter(|r| r["score"].as_f64().unwrap_or(0.0) >= threshold)
+        .collect();
+
+    if filtered_results.is_empty() {
+        return Ok(serde_json::json!({
+            "context": "",
+            "found": false,
+            "confidence": "none",
+            "citations": []
+        }));
+    }
+
+    let mut context_text = String::new();
+    let mut citations = Vec::new();
+    let mut total_score = 0.0;
+
+    for (i, result) in filtered_results.iter().enumerate() {
+        let text = result["text"].as_str().unwrap_or("");
+        let doc_id = result["doc_id"].as_str().unwrap_or("");
+        let chunk_index = result["chunk_index"].as_u64().unwrap_or(0);
+        let score = result["score"].as_f64().unwrap_or(0.0);
+        total_score += score;
+
+        context_text.push_str(&format!("[Source {}] {}\n\n", i + 1, text));
+        citations.push(serde_json::json!({
+            "id": i + 1,
+            "doc_id": doc_id,
+            "chunk_index": chunk_index,
+            "score": score
+        }));
+    }
+
+    // Map confidence
+    let avg_score = total_score / filtered_results.len() as f64;
+    let confidence = if avg_score > 0.8 { "high" } else if avg_score > 0.6 { "medium" } else { "low" };
+
+    Ok(serde_json::json!({
+        "context": context_text,
+        "found": true,
+        "confidence": confidence,
+        "citations": citations
+    }))
+}
+
 /// Legacy simpler command kept for compatibility
 #[tauri::command]
 pub async fn process_document(
