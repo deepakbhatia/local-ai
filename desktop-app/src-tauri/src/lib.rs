@@ -3,6 +3,7 @@
 pub mod hardware;
 pub mod ollama;
 pub mod documents;
+pub mod management;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -59,7 +60,9 @@ pub fn run() {
             documents::process_document,
             documents::process_and_index_document,
             documents::query_collection,
-            documents::prepare_rag_context
+            documents::prepare_rag_context,
+            management::delete_all_data,
+            management::export_data_archive
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

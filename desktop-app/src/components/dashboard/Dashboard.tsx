@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { useCollectionsStore } from '../../store/collections';
 import { useOnboardingStore } from '../../store/onboarding';
-import { FolderPlus, Book, Settings, LogOut, ChevronRight, FileText, MessageSquare } from 'lucide-react';
+import { FolderPlus, Book, Settings as SettingsIcon, LogOut, ChevronRight, FileText, MessageSquare } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { CollectionDetail } from './CollectionDetail';
 import { AskMode } from '../ask/AskMode';
+import { WriteMode } from '../write/WriteMode';
+import { Settings } from '../settings/Settings';
+import { PenTool } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
     const collections = useCollectionsStore(state => state.collections);
@@ -59,6 +62,20 @@ export const Dashboard: React.FC = () => {
                     </button>
 
                     <button
+                        onClick={() => setActiveView('write')}
+                        className={twMerge(
+                            clsx(
+                                "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm font-medium",
+                                activeView === 'write'
+                                    ? "bg-accent/10 text-accent"
+                                    : "text-text-secondary hover:bg-surface-elevated hover:text-text-primary"
+                            )
+                        )}
+                    >
+                        <PenTool size={18} /> Write Assistant
+                    </button>
+
+                    <button
                         onClick={() => setActiveView('settings')}
                         className={twMerge(
                             clsx(
@@ -69,7 +86,7 @@ export const Dashboard: React.FC = () => {
                             )
                         )}
                     >
-                        <Settings size={18} /> Settings
+                        <SettingsIcon size={18} /> Settings
                     </button>
                 </nav>
 
@@ -108,7 +125,7 @@ export const Dashboard: React.FC = () => {
                                                 <Book size={24} />
                                             </div>
                                             <button className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-surface-elevated rounded">
-                                                <Settings size={16} className="text-text-muted" />
+                                                <SettingsIcon size={16} className="text-text-muted" />
                                             </button>
                                         </div>
 
@@ -140,11 +157,12 @@ export const Dashboard: React.FC = () => {
                         <AskMode onBack={() => setActiveView('collections')} />
                     )}
 
+                    {activeView === 'write' && (
+                        <WriteMode onBack={() => setActiveView('collections')} />
+                    )}
+
                     {activeView === 'settings' && (
-                        <div>
-                            <h1 className="text-3xl font-bold mb-2">Settings</h1>
-                            <p className="text-text-secondary">Coming soon...</p>
-                        </div>
+                        <Settings />
                     )}
 
                 </div>
