@@ -35,13 +35,13 @@ export const Dashboard: React.FC = () => {
 
             {/* Sidebar */}
             <div className={clsx(
-                "border-r border-border bg-surface flex flex-col transition-all duration-300 relative",
+                "border-e border-border bg-surface flex flex-col transition-all duration-300 relative",
                 isSidebarCollapsed ? "w-20" : "w-72"
             )}>
                 {/* Collapse Toggle */}
                 <button
                     onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                    className="absolute -right-3 top-20 bg-surface border border-border rounded-full p-1 z-50 hover:bg-surface-elevated text-text-muted hover:text-accent transition-all shadow-sm"
+                    className="absolute -end-3 top-20 bg-surface border border-border rounded-full p-1 z-50 hover:bg-surface-elevated text-text-muted hover:text-accent transition-all shadow-sm"
                 >
                     {isSidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
                 </button>
@@ -51,7 +51,7 @@ export const Dashboard: React.FC = () => {
                         {getInitials(name)}
                     </div>
                     {!isSidebarCollapsed && (
-                        <div className="animate-in fade-in slide-in-from-left-2 duration-300 truncate">
+                        <div className="animate-in fade-in slide-in-from-start-2 duration-300 truncate">
                             <h2 className="font-bold tracking-tight truncate w-40">{name || 'LocalMind User'}</h2>
                             <p className="text-[10px] uppercase font-bold tracking-widest text-text-muted truncate w-40">{organization || 'Personal Device'}</p>
                         </div>
@@ -173,7 +173,7 @@ export const Dashboard: React.FC = () => {
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col bg-background overflow-hidden relative">
                 {/* Global Privacy Gradient */}
-                <div className="absolute top-0 right-0 p-4 z-50 pointer-events-none">
+                <div className="absolute top-0 end-0 p-4 z-50 pointer-events-none">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-full text-[10px] font-bold uppercase tracking-widest text-green-500 backdrop-blur-md">
                         <ShieldCheck size={12} /> 100% Offline
                     </div>

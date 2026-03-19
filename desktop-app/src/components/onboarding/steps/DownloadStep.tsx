@@ -94,7 +94,7 @@ export const DownloadStep: React.FC = () => {
     const modelToDownload = modelsConfig.models.find(m => m.id === selectedModelId);
 
     return (
-        <div className="flex flex-col w-full h-full animate-in slide-in-from-right-8 fade-in duration-300">
+        <div className="flex flex-col w-full h-full animate-in slide-in-from-end-8 fade-in duration-300">
             <div className="mb-12">
                 <h2 className="text-3xl font-semibold mb-3">Downloading AI Models</h2>
                 <p className="text-text-secondary">
@@ -116,7 +116,7 @@ export const DownloadStep: React.FC = () => {
                                 <p className="text-sm text-text-secondary">{modelToDownload?.sizeGB} GB • Primary reasoning engine</p>
                             </div>
                         </div>
-                        <div className="text-right">
+                        <div className="text-end">
                             <span className="font-mono text-lg font-medium">{modelProgress}%</span>
                         </div>
                     </div>
@@ -144,7 +144,7 @@ export const DownloadStep: React.FC = () => {
                                 <p className="text-sm text-text-secondary">274 MB • Required for document search</p>
                             </div>
                         </div>
-                        <div className="text-right">
+                        <div className="text-end">
                             <span className="font-mono text-lg font-medium">{embedProgress}%</span>
                         </div>
                     </div>

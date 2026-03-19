@@ -54,7 +54,7 @@ export const HardwareStep: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col w-full h-full animate-in slide-in-from-right-8 fade-in duration-300">
+        <div className="flex flex-col w-full h-full animate-in slide-in-from-end-8 fade-in duration-300">
             <div className="mb-8">
                 <h2 className="text-3xl font-semibold mb-3">Hardware configuration</h2>
                 <p className="text-text-secondary">
@@ -90,7 +90,7 @@ export const HardwareStep: React.FC = () => {
                             disabled={isUnsupported || undefined}
                             className={twMerge(
                                 clsx(
-                                    "w-full flex items-center p-4 rounded-lg border-2 text-left transition-all",
+                                    "w-full flex items-center p-4 rounded-lg border-2 text-start transition-all",
                                     isSelected
                                         ? "border-accent bg-surface-elevated"
                                         : isUnsupported

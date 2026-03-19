@@ -17,7 +17,7 @@ export const OnboardingWizard: React.FC = () => {
             <div className="w-full max-w-4xl min-h-[500px] flex flex-col pt-8 relative">
 
                 {/* Step Indicator */}
-                <div className="absolute top-0 left-0 right-0 flex justify-between px-8 text-sm text-text-muted">
+                <div className="absolute top-0 start-0 end-0 flex justify-between px-8 text-sm text-text-muted">
                     <span>Step {step} of 5</span>
                     <span className="flex gap-2">
                         {[1, 2, 3, 4, 5].map((s) => (

@@ -17,7 +17,7 @@ export const VerticalStep: React.FC = () => {
     const { vertical, setVertical, nextStep, prevStep } = useOnboardingStore();
 
     return (
-        <div className="flex flex-col w-full h-full animate-in slide-in-from-right-8 fade-in duration-300">
+        <div className="flex flex-col w-full h-full animate-in slide-in-from-end-8 fade-in duration-300">
             <div className="mb-12">
                 <h2 className="text-3xl font-semibold mb-3">Choose your domain</h2>
                 <p className="text-text-secondary">

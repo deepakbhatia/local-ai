@@ -201,7 +201,7 @@ export const CollectionDetail: React.FC<Props> = ({ collectionId, onBack }) => {
                                                 <div className="text-xs text-text-muted font-mono truncate max-w-xs">{doc.path}</div>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-3 ml-4">
+                                        <div className="flex items-center gap-3 ms-4">
                                             <span className={`text-sm font-medium px-2 py-1 rounded whitespace-nowrap ${badgeClass}`}>
                                                 {statusLabel(doc.id, doc.status)}
                                             </span>

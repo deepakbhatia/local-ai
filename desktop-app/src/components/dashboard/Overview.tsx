@@ -14,6 +14,7 @@ import {
     Search
 } from 'lucide-react';
 import { clsx } from 'clsx';
+import { useDateFormat } from '../../hooks/useDateFormat';
 
 interface StatCardProps {
     title: string;
@@ -45,6 +46,7 @@ export const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onN
     const collections = useCollectionsStore(state => state.collections);
     const sessions = useAskStore(state => state.sessions);
     const drafts = useWriteStore(state => state.drafts);
+    const { formatTime } = useDateFormat();
 
     const stats = useMemo(() => {
         const totalDocs = collections.reduce((acc, col) => acc + col.documentCount, 0);
@@ -140,7 +142,7 @@ export const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onN
                                 <div className="p-2 bg-accent/10 text-accent rounded-lg group-hover:bg-accent group-hover:text-white transition-colors">
                                     <Plus size={20} />
                                 </div>
-                                <div className="text-left font-semibold">New Collection</div>
+                                <div className="text-start font-semibold">New Collection</div>
                             </div>
                             <ArrowRight size={16} className="text-text-muted group-hover:text-accent group-hover:translate-x-1 transition-all" />
                         </button>
@@ -153,7 +155,7 @@ export const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onN
                                 <div className="p-2 bg-accent/10 text-accent rounded-lg group-hover:bg-accent group-hover:text-white transition-colors">
                                     <Search size={20} />
                                 </div>
-                                <div className="text-left font-semibold">Ask Documents</div>
+                                <div className="text-start font-semibold">Ask Documents</div>
                             </div>
                             <ArrowRight size={16} className="text-text-muted group-hover:text-accent group-hover:translate-x-1 transition-all" />
                         </button>
@@ -166,7 +168,7 @@ export const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onN
                                 <div className="p-2 bg-accent/10 text-accent rounded-lg group-hover:bg-accent group-hover:text-white transition-colors">
                                     <PenLine size={20} />
                                 </div>
-                                <div className="text-left font-semibold">Start Writing</div>
+                                <div className="text-start font-semibold">Start Writing</div>
                             </div>
                             <ArrowRight size={16} className="text-text-muted group-hover:text-accent group-hover:translate-x-1 transition-all" />
                         </button>
@@ -188,7 +190,7 @@ export const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onN
                                     </div>
                                     <div className="truncate">
                                         <div className="text-sm font-semibold truncate max-w-md">{activity.content}</div>
-                                        <div className="text-[10px] text-text-muted uppercase font-bold tracking-tighter">{activity.sessionTitle} • {new Date(activity.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                        <div className="text-[10px] text-text-muted uppercase font-bold tracking-tighter">{activity.sessionTitle} • {formatTime(activity.timestamp)}</div>
                                     </div>
                                 </div>
                                 <ChevronRight size={16} className="text-text-muted" />

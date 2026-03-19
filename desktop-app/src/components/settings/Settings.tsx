@@ -179,7 +179,7 @@ const ModelSettings: React.FC = () => {
                                     )}>
                                         {m.tier}
                                     </div>
-                                    <div className="text-left">
+                                    <div className="text-start">
                                         <div className="flex items-center gap-2">
                                             <span className="text-sm font-bold uppercase tracking-tighter">{m.name}</span>
                                             {m.tier === hardwareTier && (
@@ -344,7 +344,7 @@ export const Settings: React.FC = () => {
                                         )}
                                     >
                                         {v.icon}
-                                        <div className="text-left">
+                                        <div className="text-start">
                                             <div className="text-sm font-bold uppercase tracking-tighter">{v.label}</div>
                                             <div className="text-[10px] opacity-70">Optimized context</div>
                                         </div>
@@ -427,7 +427,7 @@ export const Settings: React.FC = () => {
     return (
         <div className="flex bg-background h-full w-full overflow-hidden">
             {/* Sidebar */}
-            <div className="w-64 border-r border-border bg-surface/30 flex flex-col h-full animate-in slide-in-from-left duration-500">
+            <div className="w-64 border-e border-border bg-surface/30 flex flex-col h-full animate-in slide-in-from-left duration-500">
                 <div className="p-6">
                     <h2 className="text-2xl font-bold tracking-tight mb-1">Settings</h2>
                     <p className="text-xs text-text-muted">Manage your local instance</p>

@@ -6,6 +6,7 @@ import { Send, ArrowLeft, MessageSquare, Info, Shield, ChevronRight, X, Plus, Tr
 import { clsx } from 'clsx';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { useDateFormat } from '../../hooks/useDateFormat';
 
 interface ResponsePayload {
     model: string;
@@ -15,6 +16,7 @@ interface ResponsePayload {
 
 export const AskMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const collections = useCollectionsStore((state) => state.collections);
+    const { formatTime } = useDateFormat();
     const { sessions, createSession, addMessage, activeSessionId, deleteSession, clearSession } = useAskStore();
 
     const [selectedCollectionId, setSelectedCollectionId] = useState<string>(collections[0]?.id || '');
@@ -126,7 +128,7 @@ export const AskMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     return (
         <div className="flex bg-background text-text-primary h-full w-full overflow-hidden">
             {/* Left Sidebar: Session History (4.13) */}
-            <div className="w-64 border-r border-border bg-surface/30 flex flex-col h-full">
+            <div className="w-64 border-e border-border bg-surface/30 flex flex-col h-full">
                 <div className="p-4 border-b border-border flex items-center justify-between">
                     <h3 className="text-xs font-bold uppercase tracking-widest text-text-muted">Chat History</h3>
                     <button onClick={() => createSession(selectedCollectionId)} className="p-1 hover:bg-accent/10 hover:text-accent rounded transition-colors" title="New Chat">
@@ -139,7 +141,7 @@ export const AskMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                             <button
                                 onClick={() => useAskStore.setState({ activeSessionId: s.id })}
                                 className={clsx(
-                                    "w-full text-left px-3 py-2 rounded-md transition-colors text-xs truncate pr-8",
+                                    "w-full text-start px-3 py-2 rounded-md transition-colors text-xs truncate pe-8",
                                     s.id === activeSessionId ? "bg-accent/10 text-accent font-medium" : "text-text-secondary hover:bg-surface-elevated hover:text-text-primary"
                                 )}
                             >
@@ -147,7 +149,7 @@ export const AskMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                             </button>
                             <button
                                 onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 hover:text-red-400"
+                                className="absolute end-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 hover:text-red-400"
                             >
                                 <X size={12} />
                             </button>
@@ -157,7 +159,7 @@ export const AskMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             </div>
 
             {/* Middle Panel: Chat Interface */}
-            <div className={clsx("flex-1 flex flex-col h-full border-r border-border", selectedCitation && "w-1/2")}>
+            <div className={clsx("flex-1 flex flex-col h-full border-e border-border", selectedCitation && "w-1/2")}>
 
                 {/* Header */}
                 <div className="p-4 border-b border-border flex items-center justify-between bg-surface/50">
@@ -242,7 +244,7 @@ export const AskMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                                                         <button
                                                             key={i}
                                                             onClick={() => citation && setSelectedCitation({ ...citation, text: "Click to load text..." })}
-                                                            className="text-accent hover:underline font-bold text-[10px] align-top ml-0.5"
+                                                            className="text-accent hover:underline font-bold text-[10px] align-top ms-0.5"
                                                         >
                                                             [{sourceId}]
                                                         </button>
@@ -258,7 +260,7 @@ export const AskMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                             </div>
                             <div className="mt-1 text-[10px] text-text-muted px-1 flex items-center gap-2">
                                 {m.role === 'assistant' && <span className="uppercase font-bold tracking-tighter text-accent">AI Advisor</span>}
-                                {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {formatTime(m.timestamp)}
                             </div>
                         </div>
                     ))}
@@ -267,7 +269,7 @@ export const AskMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                         <div className="flex flex-col items-start translate-y-0 animate-in fade-in duration-300">
                             <div className="max-w-[85%] p-4 rounded-lg text-sm leading-relaxed bg-surface border border-border text-text-primary">
                                 {currentStreamingResponse || "Thinking..."}
-                                {isGenerating && <span className="inline-block w-1.5 h-4 bg-accent ml-1 animate-pulse" />}
+                                {isGenerating && <span className="inline-block w-1.5 h-4 bg-accent ms-1 animate-pulse" />}
                             </div>
                             <div className="mt-1 text-[10px] text-text-muted px-1 uppercase font-bold tracking-tighter text-accent">
                                 AI Advisor (Streaming)
@@ -291,7 +293,7 @@ export const AskMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                             }}
                             placeholder="Type your question..."
                             rows={1}
-                            className="w-full bg-background border border-border rounded-lg pl-4 pr-12 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent shadow-sm resize-none overflow-hidden"
+                            className="w-full bg-background border border-border rounded-lg ps-4 pe-12 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent shadow-sm resize-none overflow-hidden"
                             style={{ minHeight: '44px', maxHeight: '120px' }}
                             disabled={isGenerating}
                             ref={(el) => {
@@ -304,7 +306,7 @@ export const AskMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                         <button
                             onClick={handleSend}
                             disabled={!query.trim() || isGenerating}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-accent hover:bg-accent/90 disabled:bg-surface-elevated text-white rounded-md transition-all shadow-sm"
+                            className="absolute end-2 top-1/2 -translate-y-1/2 p-2 bg-accent hover:bg-accent/90 disabled:bg-surface-elevated text-white rounded-md transition-all shadow-sm"
                         >
                             <Send size={16} />
                         </button>
@@ -317,7 +319,7 @@ export const AskMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
             {/* Right Panel: Source Viewer (Task 4.10) */}
             {selectedCitation && (
-                <div className="w-2/5 flex flex-col h-full bg-surface border-l border-border animate-in slide-in-from-right duration-300">
+                <div className="w-2/5 flex flex-col h-full bg-surface border-s border-border animate-in slide-in-from-right duration-300">
                     <div className="p-4 border-b border-border flex items-center justify-between">
                         <div className="flex items-center gap-2 text-sm font-semibold">
                             <Info size={16} className="text-accent" />
