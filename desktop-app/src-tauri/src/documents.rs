@@ -4,9 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 use lopdf::Document;
-use tauri::Manager;
-use tauri::Emitter;
-
+use tauri::{Manager, Emitter};
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ProcessedDocument {
     pub id: String,
@@ -16,7 +14,7 @@ pub struct ProcessedDocument {
     pub chunk_count: usize,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct IndexingProgress {
     pub doc_id: String,
     pub filename: String,
@@ -365,4 +363,48 @@ pub async fn process_document(
     file_path: String
 ) -> Result<ProcessedDocument, String> {
     process_and_index_document(app, collection_id, file_path, None).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::path::PathBuf;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_chunk_text() {
+        let text = "This is a simple test sentence. We want to chunk this string into smaller parts. Let's see how well our overlap works in practice.";
+        // 22 words total.
+        
+        let chunks = chunk_text(text, 10, 2);
+        
+        assert_eq!(chunks.len(), 3);
+        assert!(chunks[0].contains("This is a simple test sentence. We want to chunk"));
+        // Overlap of 2 means the last two words "to chunk" should be at the start of next.
+        assert!(chunks[1].starts_with("to chunk this string into smaller parts. Let's see how"));
+        assert!(chunks[2].starts_with("see how well our overlap works in practice."));
+    }
+
+    #[test]
+    fn test_extract_text_txt() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("test.txt");
+        let content = "Hello world!";
+        fs::write(&file_path, content).unwrap();
+
+        let extracted = extract_text(&file_path).unwrap();
+        assert_eq!(extracted, content);
+    }
+
+    #[test]
+    fn test_extract_text_unsupported() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("test.xyz");
+        fs::write(&file_path, "Unsupported content").unwrap();
+
+        let extracted = extract_text(&file_path);
+        assert!(extracted.is_err());
+        assert!(extracted.err().unwrap().contains("Unsupported file extension"));
+    }
 }

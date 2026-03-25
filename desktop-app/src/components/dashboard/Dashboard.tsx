@@ -21,6 +21,8 @@ import { Overview } from './Overview';
 import { AskMode } from '../ask/AskMode';
 import { WriteMode } from '../write/WriteMode';
 import { Settings } from '../settings/Settings';
+import { TestHarness } from './TestHarness';
+import { Beaker } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
     const collections = useCollectionsStore(state => state.collections);
@@ -141,6 +143,22 @@ export const Dashboard: React.FC = () => {
                     >
                         <SettingsIcon size={20} className={activeView === 'settings' ? "text-accent" : "text-text-muted group-hover:text-text-primary"} />
                         {!isSidebarCollapsed && <span className="animate-in fade-in duration-300">Settings</span>}
+                    </button>
+
+                    <button
+                        onClick={() => setActiveView('test')}
+                        className={twMerge(
+                            clsx(
+                                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm font-medium group",
+                                activeView === 'test'
+                                    ? "bg-accent/10 text-accent"
+                                    : "text-text-secondary hover:bg-surface-elevated hover:text-text-primary"
+                            )
+                        )}
+                        title={isSidebarCollapsed ? "Evaluation Subsystem" : ""}
+                    >
+                        <Beaker size={20} className={activeView === 'test' ? "text-accent" : "text-text-muted group-hover:text-text-primary"} />
+                        {!isSidebarCollapsed && <span className="animate-in fade-in duration-300">Test Harness</span>}
                     </button>
                 </nav>
 
@@ -265,6 +283,9 @@ export const Dashboard: React.FC = () => {
                             <Settings />
                         )}
 
+                        {activeView === 'test' && (
+                            <TestHarness />
+                        )}
                     </div>
                 </div>
             </div>

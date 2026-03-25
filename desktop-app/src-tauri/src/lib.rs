@@ -1,4 +1,4 @@
-use tauri::{menu::{Menu, MenuItem}, tray::{TrayIconBuilder, TrayIconEvent}};
+use tauri::{menu::{Menu, MenuItem}, tray::{TrayIconBuilder, TrayIconEvent}, Manager};
 
 pub mod hardware;
 pub mod ollama;
@@ -53,8 +53,8 @@ pub fn run() {
                     if let TrayIconEvent::Click { .. } = event {
                         let app = tray.app_handle();
                         if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
+                            let _ = window.show().unwrap_or(());
+                            let _ = window.set_focus().unwrap_or(());
                         }
                     }
                 })
@@ -81,6 +81,7 @@ pub fn run() {
             ollama::list_installed_models,
             ollama::download_model,
             ollama::generate_text,
+            ollama::generate_text_sync,
             ollama::embed_text,
             ollama::run_benchmark,
             ollama::switch_model,

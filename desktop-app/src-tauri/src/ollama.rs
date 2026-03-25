@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tauri::{Emitter, Emitter as _}; // Ensure Emitter is in scope for emitting events
+use tauri::Emitter; // Ensure Emitter is in scope for emitting events
 use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -197,6 +197,35 @@ pub async fn generate_text(app: tauri::AppHandle, model_name: String, prompt: St
     }
 
     Ok(true)
+}
+
+#[tauri::command]
+pub async fn generate_text_sync(app: tauri::AppHandle, model_name: String, prompt: String, context: Option<Vec<u64>>) -> Result<String, String> {
+    let client = reqwest::Client::new();
+    
+    let mut req_body = serde_json::json!({
+        "model": model_name,
+        "prompt": prompt,
+        "stream": false
+    });
+
+    if let Some(ctx) = context {
+        req_body.as_object_mut().unwrap().insert("context".to_string(), serde_json::json!(ctx));
+    }
+
+    let res = client.post("http://localhost:11434/api/generate")
+        .json(&req_body)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let json: Value = res.json().await.map_err(|e| e.to_string())?;
+    
+    if let Some(resp) = json.get("response").and_then(|r| r.as_str()) {
+        Ok(resp.to_string())
+    } else {
+        Err("No response found in API reply".to_string())
+    }
 }
 
 #[tauri::command]
