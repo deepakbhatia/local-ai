@@ -2,9 +2,20 @@ import React, { useState } from 'react';
 import { useWriteStore } from '../../store/write';
 import { useCollectionsStore } from '../../store/collections';
 import { useOnboardingStore } from '../../store/onboarding';
-import { ArrowLeft, BookOpen, Plus, X, ChevronRight, PenTool, Globe, Save, Download, FileText, Search } from 'lucide-react';
+import {
+    ArrowLeft, FileText, Plus, X, PenTool, Globe,
+    Download, Search, ChevronRight, Shield
+} from 'lucide-react';
 import { Editor } from './Editor';
+import { invoke } from '@tauri-apps/api/core';
 import { useDateFormat } from '../../hooks/useDateFormat';
+
+const AI_COMMANDS = [
+    { key: '⌘K', label: 'Expand paragraph', cmd: 'expand' },
+    { key: '⌘J', label: 'Rewrite formally', cmd: 'rewrite' },
+    { key: '⌘H', label: 'Summarise context', cmd: 'summarize' },
+    { key: '⌘E', label: 'Extract key facts', cmd: 'extract' },
+];
 
 export const WriteMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const { drafts, activeDraftId, updateDraft, addDocToContext, removeDocFromContext, setActiveDraft } = useWriteStore();
@@ -19,165 +30,205 @@ export const WriteMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const currentContext = activeDraft?.contextDocs || [];
 
     const handleUpdateContent = (html: string) => {
-        if (activeDraftId) {
-            updateDraft(activeDraftId, { content: html });
+        if (activeDraftId) updateDraft(activeDraftId, { content: html });
+    };
+
+    const handleExport = async () => {
+        if (!activeDraft) return;
+        try {
+            await invoke('export_draft_pdf', { title: activeDraft.title, content: activeDraft.content });
+        } catch (e) {
+            console.error(e);
         }
     };
 
-    const handleAddDocToContext = (docId: string) => {
-        if (activeDraftId) {
-            addDocToContext(activeDraftId, docId);
-        }
-    };
-
-    const handleRemoveDocFromContext = (docId: string) => {
-        if (activeDraftId) {
-            removeDocFromContext(activeDraftId, docId);
-        }
-    };
-
+    // === DRAFT LIST VIEW ===
     if (!activeDraft) {
         return (
-            <div className="flex flex-col h-full p-8 max-w-4xl mx-auto">
-                <div className="flex justify-between items-center mb-8">
-                    <h1 className="text-3xl font-bold">Your Drafts</h1>
+            <div
+                className="flex flex-col h-full overflow-hidden rounded-xl border border-white/[0.07] shadow-2xl"
+                style={{ background: '#0E0F11', color: '#F0F0F2', fontFamily: "'DM Sans', system-ui, sans-serif" }}
+            >
+                <div className="px-8 py-6 border-b border-white/[0.07] flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-semibold tracking-tight">Your Drafts</h1>
+                        <p className="text-[12px] text-[#5A5B66] mt-0.5">Private to this device</p>
+                    </div>
                     <button
                         onClick={() => useWriteStore.getState().createDraft()}
-                        className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent/90 text-white font-medium rounded-sm transition-colors text-sm"
+                        className="flex items-center gap-1.5 px-4 py-2 bg-[#4F8EF7] hover:bg-[#4F8EF7]/90 text-white font-medium rounded-md transition-colors text-[13px]"
                     >
-                        <Plus size={16} /> New Draft
+                        <Plus size={15} /> New Draft
                     </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {drafts.map(d => (
-                        <div
-                            key={d.id}
-                            onClick={() => setActiveDraft(d.id)}
-                            className="p-6 bg-surface border border-border rounded-lg hover:border-accent transition-all cursor-pointer group flex flex-col justify-between min-h-[160px]"
-                        >
-                            <div>
-                                <h3 className="font-semibold text-lg mb-2">{d.title}</h3>
-                                <div className="text-xs text-text-muted mb-4 uppercase font-bold tracking-widest">{formatDate(d.updatedAt)}</div>
-                            </div>
-                            <div className="flex items-center justify-between mt-auto border-t border-border pt-4">
-                                <span className="text-xs text-text-muted flex items-center gap-1">
-                                    <Globe size={12} /> {d.contextDocs.length} Context Docs
-                                </span>
-                                <ChevronRight size={18} className="text-text-muted group-hover:text-accent transition-colors" />
-                            </div>
-                        </div>
-                    ))}
+                <div className="flex-1 overflow-y-auto p-8">
                     {drafts.length === 0 && (
-                        <div className="col-span-full py-12 text-center text-text-muted opacity-50 flex flex-col items-center">
-                            <PenTool size={48} className="mb-4" />
-                            <p>You haven't created any drafts yet.</p>
+                        <div className="flex flex-col items-center justify-center h-full opacity-30 space-y-3">
+                            <PenTool size={40} className="text-[#5A5B66]" />
+                            <div className="text-center">
+                                <p className="text-sm text-[#9A9BA8]">No drafts yet</p>
+                                <p className="text-[11px] text-[#5A5B66]">Create your first document above</p>
+                            </div>
                         </div>
                     )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl">
+                        {drafts.map(d => (
+                            <div
+                                key={d.id}
+                                onClick={() => setActiveDraft(d.id)}
+                                className="p-5 bg-[#16181C] border border-white/[0.07] rounded-xl hover:border-[rgba(79,142,247,0.3)] transition-all cursor-pointer group flex flex-col min-h-[140px]"
+                            >
+                                <h3 className="font-medium text-[14px] mb-1 truncate">{d.title}</h3>
+                                <div className="text-[10px] text-[#5A5B66] uppercase tracking-[0.08em] mb-3">{formatDate(d.updatedAt)}</div>
+                                <div className="mt-auto flex items-center justify-between border-t border-white/[0.07] pt-3">
+                                    <span className="text-[11px] text-[#5A5B66] flex items-center gap-1">
+                                        <Globe size={11} /> {d.contextDocs.length} context doc{d.contextDocs.length !== 1 ? 's' : ''}
+                                    </span>
+                                    <ChevronRight size={15} className="text-[#5A5B66] group-hover:text-[#4F8EF7] transition-colors" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
         );
     }
 
+    // === EDITOR VIEW ===
     return (
-        <div className="flex bg-background h-screen overflow-hidden">
-            <div className="w-80 border-e border-border bg-surface/30 flex flex-col h-full animate-in slide-in-from-left duration-300">
-                <div className="p-4 border-b border-border flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <BookOpen size={18} className="text-accent" />
-                        <h2 className="font-semibold text-xs uppercase tracking-widest">Document Context</h2>
-                    </div>
+        <div
+            className="flex h-full overflow-hidden rounded-xl border border-white/[0.07] shadow-2xl"
+            style={{ background: '#0E0F11', color: '#F0F0F2', fontFamily: "'DM Sans', system-ui, sans-serif" }}
+        >
+            {/* === LEFT: Context Panel (220px per spec) === */}
+            <div className="w-[220px] min-w-[220px] border-r border-white/[0.07] bg-[#16181C] flex flex-col">
+                <div className="px-3.5 py-3 border-b border-white/[0.07]">
+                    <div className="text-[10px] text-[#5A5B66] uppercase tracking-[0.08em] font-medium">Context</div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                    <div className="space-y-2">
-                        {currentContext.map(docId => (
-                            <div key={docId} className="flex items-center justify-between p-3 bg-background border border-border rounded-lg text-xs group">
-                                <div className="flex items-center gap-2 truncate">
-                                    <FileText size={14} className="text-text-muted" />
-                                    <span className="truncate">{docId.substring(0, 15)}...</span>
+                {/* Context docs */}
+                <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
+                    {currentContext.map(docId => {
+                        const col = collections.find(c => c.id === docId);
+                        return (
+                            <div key={docId} className="flex items-start gap-2 p-2 rounded-md bg-[#1E2026] border border-white/[0.07] group">
+                                <FileText size={13} className="text-[#5A5B66] flex-shrink-0 mt-0.5" />
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-[11px] text-[#9A9BA8] truncate">{col?.name || docId.substring(0, 16)}</div>
+                                    <div className="text-[10px] text-[#5A5B66]">indexed</div>
                                 </div>
-                                <button onClick={() => handleRemoveDocFromContext(docId)} className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400">
-                                    <X size={14} />
+                                <button
+                                    onClick={() => activeDraftId && removeDocFromContext(activeDraftId, docId)}
+                                    className="opacity-0 group-hover:opacity-100 text-[#5A5B66] hover:text-red-400 transition-all flex-shrink-0"
+                                >
+                                    <X size={11} />
                                 </button>
                             </div>
-                        ))}
-                    </div>
+                        );
+                    })}
 
-                    {!isSelectingDocs && (
+                    {/* Add document */}
+                    {!isSelectingDocs ? (
                         <button
                             onClick={() => setIsSelectingDocs(true)}
-                            className="w-full py-2 border border-border rounded hover:bg-surface-elevated text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors"
+                            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-md border border-dashed border-white/[0.12] text-[11px] text-[#5A5B66] hover:border-[rgba(79,142,247,0.3)] hover:text-[#4F8EF7] transition-all"
                         >
-                            <Plus size={14} /> Add Documents
+                            <Plus size={11} /> Add document
                         </button>
-                    )}
-
-                    {isSelectingDocs && (
-                        <div className="space-y-3 animate-in fade-in duration-200">
+                    ) : (
+                        <div className="space-y-2 animate-in fade-in duration-200">
                             <div className="flex items-center justify-between">
-                                <h4 className="text-[10px] font-bold uppercase text-text-muted">Select from Collections</h4>
-                                <button onClick={() => setIsSelectingDocs(false)} className="text-[10px] text-accent">Done</button>
+                                <span className="text-[10px] text-[#5A5B66] uppercase tracking-[0.08em]">Pick a collection</span>
+                                <button onClick={() => setIsSelectingDocs(false)} className="text-[10px] text-[#4F8EF7]">Done</button>
                             </div>
                             <div className="relative">
                                 <input
                                     type="text"
                                     value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="Search documents..."
-                                    className="w-full bg-background border border-border rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-accent"
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    placeholder="Search…"
+                                    className="w-full bg-[#1E2026] border border-white/[0.07] rounded px-2 py-1 text-[11px] text-[#F0F0F2] placeholder-[#5A5B66] outline-none focus:border-[rgba(79,142,247,0.3)] pr-6"
                                 />
-                                <Search size={12} className="absolute end-2 top-1/2 -translate-y-1/2 text-text-muted" />
+                                <Search size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#5A5B66]" />
                             </div>
-                            <div className="space-y-1 max-h-64 overflow-y-auto bg-background/50 p-1 rounded border border-border">
-                                {collections.map(c => (
-                                    <div key={c.id} className="p-2 border-b border-border/10 last:border-0 hover:bg-accent/5 rounded transition-colors cursor-pointer text-[10px] line-clamp-1" onClick={() => handleAddDocToContext(c.id)}>
-                                        📁 {c.name}
-                                    </div>
-                                ))}
+                            <div className="space-y-0.5 max-h-40 overflow-y-auto">
+                                {collections
+                                    .filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                                    .map(c => (
+                                        <button
+                                            key={c.id}
+                                            onClick={() => { activeDraftId && addDocToContext(activeDraftId, c.id); setIsSelectingDocs(false); }}
+                                            className="w-full text-left px-2 py-1.5 rounded text-[11px] text-[#9A9BA8] hover:bg-[rgba(79,142,247,0.08)] hover:text-[#4F8EF7] transition-colors truncate"
+                                        >
+                                            📁 {c.name}
+                                        </button>
+                                    ))}
                             </div>
                         </div>
                     )}
                 </div>
+
+                {/* AI Commands reference */}
+                <div className="p-3 border-t border-white/[0.07]">
+                    <div className="text-[10px] text-[#5A5B66] uppercase tracking-[0.08em] font-medium mb-2">AI Commands</div>
+                    <div className="space-y-1">
+                        {AI_COMMANDS.map(({ key, label }) => (
+                            <div key={key} className="flex items-center gap-2 px-2 py-1.5 rounded bg-[#1E2026] border border-white/[0.07] text-[11px] text-[#9A9BA8] cursor-default">
+                                <span className="text-[10px] text-[#5A5B66] font-mono">{key}</span>
+                                {label}
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
 
-            <div className="flex-1 flex flex-col h-full">
-                <div className="p-4 border-b border-border flex items-center justify-between bg-surface/50">
-                    <div className="flex items-center gap-6">
-                        <button onClick={onBack} className="p-2 hover:bg-surface-elevated rounded-md text-text-secondary transition-colors">
-                            <ArrowLeft size={18} />
-                        </button>
-                        <div className="flex flex-col">
-                            <input
-                                value={activeDraft.title}
-                                onChange={(e) => updateDraft(activeDraftId as string, { title: e.target.value })}
-                                className="bg-transparent font-bold text-lg border-none focus:outline-none focus:ring-0 w-64"
-                                placeholder="Draft Title"
-                            />
-                            <div className="text-[10px] text-text-muted uppercase font-bold tracking-tighter flex items-center gap-2">
-                                <span className="flex items-center gap-1"><Save size={10} /> Auto-saved</span>
-                                <span>|</span>
-                                <span>{activeDraft.content.length} characters</span>
-                            </div>
-                        </div>
+            {/* === RIGHT: Editor === */}
+            <div className="flex-1 flex flex-col min-w-0">
+                {/* Editor topbar */}
+                <div className="h-12 min-h-[48px] bg-[#16181C] border-b border-white/[0.07] flex items-center px-4 gap-3">
+                    <button onClick={onBack} className="p-1.5 rounded hover:bg-white/5 text-[#5A5B66] hover:text-[#F0F0F2] transition-colors">
+                        <ArrowLeft size={15} />
+                    </button>
+
+                    {/* Template chip */}
+                    <div className="flex items-center gap-1.5 text-[11px] text-[#9A9BA8] bg-[#1E2026] border border-white/[0.07] rounded-md px-2.5 py-1">
+                        <svg viewBox="0 0 10 10" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="1.5">
+                            <rect x="1" y="1" width="8" height="8" rx="1"/><path d="M3 4h4M3 6h2"/>
+                        </svg>
+                        {vertical.charAt(0).toUpperCase() + vertical.slice(1)} draft
                     </div>
 
+                    {/* Title */}
+                    <input
+                        value={activeDraft.title}
+                        onChange={e => updateDraft(activeDraftId as string, { title: e.target.value })}
+                        className="flex-1 bg-transparent text-[13px] font-medium border-none focus:outline-none text-[#F0F0F2] placeholder-[#5A5B66] min-w-0"
+                        placeholder="Untitled draft"
+                    />
+
                     <div className="flex items-center gap-3">
-                        <button className="px-3 py-1 text-xs hover:bg-surface-elevated rounded border border-border transition-colors flex items-center gap-2 font-medium">
-                            <Download size={14} /> Export
+                        <span className="text-[11px] text-[#5A5B66]">Auto-saved</span>
+                        <div className="flex items-center gap-1.5 text-[#3DD68C] bg-[rgba(61,214,140,0.1)] border border-[rgba(61,214,140,0.2)] rounded-full px-2.5 py-1 text-[11px]">
+                            <Shield size={9} /> 100% offline
+                        </div>
+                        <button
+                            onClick={handleExport}
+                            className="px-3 py-1 rounded-md bg-[#4F8EF7] text-white text-[11px] font-medium flex items-center gap-1.5 hover:bg-[#4F8EF7]/90 transition-colors"
+                        >
+                            <Download size={12} /> Export
                         </button>
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-8 flex justify-center">
-                    <div className="w-full max-w-3xl animate-in zoom-in-95 duration-500">
-                        <Editor
-                            content={activeDraft.content}
-                            onUpdate={handleUpdateContent}
-                            contextDocIds={activeDraft.contextDocs}
-                            vertical={vertical}
-                        />
-                    </div>
+                {/* Editor body */}
+                <div className="flex-1 overflow-hidden flex flex-col">
+                    <Editor
+                        content={activeDraft.content}
+                        onUpdate={handleUpdateContent}
+                        contextDocIds={activeDraft.contextDocs}
+                        vertical={vertical}
+                    />
                 </div>
             </div>
         </div>
