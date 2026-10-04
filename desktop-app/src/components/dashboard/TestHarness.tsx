@@ -41,7 +41,7 @@ export const TestHarness: React.FC = () => {
         try {
             // Simplified non-streaming call for the harness
             const response = await invoke<string>('generate_text_sync', {
-                modelName: selectedModelId || 'llama3.2',
+                modelName: selectedModelId || 'qwen3.5:4b',
                 prompt: test.prompt,
             });
             fullResponse = response;

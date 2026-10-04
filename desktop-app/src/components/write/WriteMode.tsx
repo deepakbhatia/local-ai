@@ -20,7 +20,7 @@ const AI_COMMANDS = [
 export const WriteMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const { drafts, activeDraftId, updateDraft, addDocToContext, removeDocFromContext, setActiveDraft } = useWriteStore();
     const collections = useCollectionsStore((state) => state.collections);
-    const { vertical } = useOnboardingStore();
+    const { vertical, selectedModelId } = useOnboardingStore();
     const { formatDate } = useDateFormat();
 
     const activeDraft = drafts.find((d) => d.id === activeDraftId);
@@ -28,6 +28,9 @@ export const WriteMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const [searchQuery, setSearchQuery] = useState('');
 
     const currentContext = activeDraft?.contextDocs || [];
+    const contextCollectionId =
+        collections.find((c) => (c.documents ?? []).some((d) => currentContext.includes(d.id)))?.id
+        || collections[0]?.id;
 
     const handleUpdateContent = (html: string) => {
         if (activeDraftId) updateDraft(activeDraftId, { content: html });
@@ -228,6 +231,8 @@ export const WriteMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                         onUpdate={handleUpdateContent}
                         contextDocIds={activeDraft.contextDocs}
                         vertical={vertical}
+                        modelName={selectedModelId || undefined}
+                        collectionId={contextCollectionId}
                     />
                 </div>
             </div>

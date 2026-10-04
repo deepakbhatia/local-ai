@@ -25,7 +25,7 @@ export const AskMode: React.FC<{ onBack?: () => void }> = () => {
 
     const activeSession = sessions.find((s) => s.id === activeSessionId) || { messages: [] };
     const chatEndRef = useRef<HTMLDivElement>(null);
-    const { vertical } = useOnboardingStore();
+    const { vertical, selectedModelId } = useOnboardingStore();
 
     useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [activeSession.messages, currentStreamingResponse]);
 
@@ -59,15 +59,34 @@ export const AskMode: React.FC<{ onBack?: () => void }> = () => {
         setCurrentStreamingResponse('');
         setLastRagResult(null);
         try {
+            const modelName = selectedModelId || 'qwen3.5:4b';
             const ragResult = await invoke<any>('prepare_rag_context', { collectionId: selectedCollectionId, query: userQuery });
             setLastRagResult(ragResult);
-            const tone = vertical === 'legal' ? 'You are a precise Legal Advisor. Cite statutes and sections where possible.' :
-                vertical === 'medical' ? 'You are a Medical Research Assistant. Provide evidence-based info with a disclaimer.' :
-                    vertical === 'finance' ? 'You are a Financial Analyst. Be objective and mention risks.' : 'You are a knowledgeable AI assistant.';
-            const systemPrompt = ragResult.found
-                ? `${tone} Use the following context to answer precisely. If the answer isn't in the context, say you don't know based on the provided documents. Always cite sources as [Source X].\n\nCONTEXT:\n${ragResult.context}`
-                : `${tone} No specific context found — answer from general knowledge and mention it isn't in the private documents.`;
-            await invoke('generate_text', { modelName: 'llama3.2', prompt: `${systemPrompt}\n\nUSER QUESTION: ${userQuery}\n\nAI RESPONSE:` });
+
+            if (!ragResult.found) {
+                addMessage(sessionId, {
+                    role: 'assistant',
+                    content: 'Not found in your documents. Try rephrasing the question or adding more files to this matter.',
+                    confidence: 'none',
+                    citations: [],
+                });
+                setIsGenerating(false);
+                return;
+            }
+
+            const tone = vertical === 'legal'
+                ? 'You are a precise legal research assistant for a solo lawyer or small firm. You are not a substitute for legal advice. Prefer quoting the documents.'
+                : vertical === 'medical' ? 'You are a Medical Research Assistant. Provide evidence-based info with a disclaimer.'
+                    : vertical === 'finance' ? 'You are a Financial Analyst. Be objective and mention risks.'
+                        : 'You are a knowledgeable AI assistant.';
+            const systemPrompt = `${tone}
+Answer ONLY using the CONTEXT below. If the answer is not clearly supported, say "Not found in your documents."
+Do not use outside knowledge. Always cite sources as [Source X].
+This is a research aid — the attorney remains responsible for verification.
+
+CONTEXT:
+${ragResult.context}`;
+            await invoke('generate_text', { modelName, prompt: `${systemPrompt}\n\nUSER QUESTION: ${userQuery}\n\nAI RESPONSE:` });
         } catch (e) { console.error('Ask error:', e); setIsGenerating(false); }
     };
 

@@ -187,7 +187,7 @@ export const Dashboard: React.FC = () => {
                                 <ShieldCheck size={12} className="text-accent" />
                             </div>
                             <div className="text-[10px] text-text-muted font-medium truncate mb-1 flex items-center gap-1">
-                                <Monitor size={10} /> {selectedModelId || 'llama3.2:1b'}
+                                <Monitor size={10} /> {selectedModelId || 'qwen3.5:4b'}
                             </div>
                             <div className="h-1 w-full bg-border rounded-full overflow-hidden">
                                 <div className="h-full bg-accent w-full opacity-30" />

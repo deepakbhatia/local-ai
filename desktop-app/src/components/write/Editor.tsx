@@ -29,11 +29,13 @@ interface EditorProps {
     onUpdate: (html: string) => void;
     contextDocIds: string[];
     vertical: string;
+    modelName?: string;
+    collectionId?: string;
 }
 
 type AiCommand = 'expand' | 'rewrite' | 'cite' | 'summarize';
 
-export const Editor: React.FC<EditorProps> = ({ content, onUpdate, contextDocIds, vertical }) => {
+export const Editor: React.FC<EditorProps> = ({ content, onUpdate, contextDocIds, vertical, modelName, collectionId }) => {
     const [suggestion, setSuggestion] = useState<string | null>(null);
     const [isThinking, setIsThinking] = useState(false);
     const [activeCommand, setActiveCommand] = useState<AiCommand | null>(null);
@@ -128,24 +130,38 @@ export const Editor: React.FC<EditorProps> = ({ content, onUpdate, contextDocIds
         });
 
         try {
-            const tone = vertical === 'legal' ? 'Legal Advisor' :
+            const activeModel = modelName || 'qwen3.5:4b';
+            let contextText = '';
+            if (collectionId && contextDocIds.length > 0) {
+                try {
+                    const ragResult = await invoke<{ found: boolean; context: string }>('prepare_rag_context', {
+                        collectionId,
+                        query: selectedText || 'key facts from the matter documents',
+                    });
+                    if (ragResult.found) contextText = ragResult.context;
+                } catch (ragErr) {
+                    console.error('Write RAG context failed', ragErr);
+                }
+            }
+
+            const tone = vertical === 'legal' ? 'legal drafting assistant for a solo lawyer or small firm' :
                 vertical === 'medical' ? 'Medical Researcher' :
                     vertical === 'finance' ? 'Financial Analyst' : 'Professional Writer';
-            let prompt = `You are a ${tone}. `;
-            if (contextDocIds.length > 0) prompt += `Reference context documents (IDs: ${contextDocIds.join(', ')}) where helpful. `;
+            let prompt = `You are a ${tone}. Ground claims in the CONTEXT when provided. If context is missing, say so. Return only the requested text.\n\n`;
+            if (contextText) prompt += `CONTEXT:\n${contextText}\n\n`;
 
-            if (command === 'expand') prompt += `Expand the following text with more specific detail and professional prose. Return only the expanded text, no preamble: "${selectedText}"`;
-            else if (command === 'rewrite') prompt += `Rewrite the following text to be more formal and precise. Return only the rewritten text: "${selectedText}"`;
-            else if (command === 'cite') prompt += `Suggest a citation or supporting argument for the following claim. Return only the suggestion: "${selectedText}"`;
-            else if (command === 'summarize') prompt += `Summarise the key facts from the context documents provided. Return a concise bulleted summary.`;
+            if (command === 'expand') prompt += `Expand the following text with more specific detail and professional prose: "${selectedText}"`;
+            else if (command === 'rewrite') prompt += `Rewrite the following text to be more formal and precise: "${selectedText}"`;
+            else if (command === 'cite') prompt += `Suggest a citation or supporting argument from CONTEXT for the following claim: "${selectedText}"`;
+            else if (command === 'summarize') prompt += `Summarise the key facts from CONTEXT as a concise bulleted list.`;
 
-            await invoke('generate_text', { modelName: 'llama3.2', prompt });
+            await invoke('generate_text', { modelName: activeModel, prompt });
         } catch (e) {
             console.error(e);
             setIsThinking(false);
         }
         unlisten();
-    }, [editor, isThinking, vertical, contextDocIds]);
+    }, [editor, isThinking, vertical, contextDocIds, modelName, collectionId]);
 
     useEffect(() => {
         if (editor && content !== editor.getHTML() && !editor.isFocused) {
