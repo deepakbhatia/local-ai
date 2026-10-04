@@ -31,7 +31,7 @@ export const useOnboardingStore = create<OnboardingState>()(
         (set) => ({
             completed: false,
             step: 1,
-            vertical: 'general',
+            vertical: 'legal',
             hardwareTier: null,
             selectedModelId: null,
             name: '',
@@ -49,7 +49,7 @@ export const useOnboardingStore = create<OnboardingState>()(
             resetOnboarding: () => set({
                 completed: false,
                 step: 1,
-                vertical: 'general',
+                vertical: 'legal',
                 hardwareTier: null,
                 selectedModelId: null,
                 name: '',
