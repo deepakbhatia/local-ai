@@ -337,10 +337,14 @@ const ModelSettings: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 gap-3">
-                    {modelsConfig.models.map((m) => {
+                    {[...modelsConfig.models]
+                        .sort((a, b) => Number(Boolean((a as { advanced?: boolean }).advanced)) - Number(Boolean((b as { advanced?: boolean }).advanced)) || a.tier - b.tier)
+                        .map((m) => {
                         const installed = isInstalled(m.pullCommand);
                         const isDownloading = downloadingModelId === m.pullCommand;
                         const isSelected = selectedModelId === m.id;
+                        const isAdvanced = Boolean((m as { advanced?: boolean }).advanced);
+                        const isRecommended = !isAdvanced && m.tier === hardwareTier;
 
                         return (
                             <div
@@ -360,8 +364,11 @@ const ModelSettings: React.FC = () => {
                                     <div className="text-start">
                                         <div className="flex items-center gap-2">
                                             <span className="text-sm font-bold uppercase tracking-tighter">{m.name}</span>
-                                            {m.tier === hardwareTier && (
+                                            {isRecommended && (
                                                 <span className="text-[8px] bg-accent/20 text-accent px-1 py-0.5 rounded font-bold">REC</span>
+                                            )}
+                                            {isAdvanced && (
+                                                <span className="text-[8px] bg-text-muted/15 text-text-muted px-1 py-0.5 rounded font-bold">ADV</span>
                                             )}
                                         </div>
                                         <div className="text-[10px] text-text-muted">{m.description} • {m.sizeGB}GB</div>
