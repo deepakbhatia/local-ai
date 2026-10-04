@@ -6,6 +6,8 @@ export interface Citation {
     doc_id: string;
     chunk_index: number;
     score: number;
+    filename?: string;
+    text?: string;
 }
 
 export interface Message {

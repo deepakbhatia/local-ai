@@ -127,14 +127,18 @@ pub async fn process_and_index_document(
     collection_id: String,
     file_path: String,
     embedding_model: Option<String>,
+    raw_text: Option<String>,
+    display_filename: Option<String>,
 ) -> Result<ProcessedDocument, String> {
     let model = embedding_model.unwrap_or_else(|| "nomic-embed-text".to_string());
     let doc_id = Uuid::new_v4().to_string();
-    let filename = Path::new(&file_path)
-        .file_name()
-        .unwrap_or_default()
-        .to_string_lossy()
-        .to_string();
+    let filename = display_filename.unwrap_or_else(|| {
+        Path::new(&file_path)
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string()
+    });
 
     let emit_progress = |stage: &str, chunks_done: usize, chunks_total: usize, error: Option<String>| {
         let _ = app.emit("indexing-progress", IndexingProgress {
@@ -151,9 +155,12 @@ pub async fn process_and_index_document(
     emit_progress("storing", 0, 0, None);
     let stored_path = store_document(&app, &file_path).await?;
 
-    // Stage 2: Extract
+    // Stage 2: Extract (or use pre-extracted text, e.g. DOCX via frontend)
     emit_progress("extracting", 0, 0, None);
-    let raw_text = extract_text(&stored_path)?;
+    let raw_text = match raw_text {
+        Some(text) if !text.trim().is_empty() => text,
+        _ => extract_text(&stored_path)?,
+    };
 
     // Stage 3: Chunk
     emit_progress("chunking", 0, 0, None);
@@ -175,6 +182,7 @@ pub async fn process_and_index_document(
                     "chunk_id": Uuid::new_v4().to_string(),
                     "doc_id": doc_id,
                     "collection_id": collection_id,
+                    "filename": filename,
                     "text": chunk,
                     "vector": vector,
                     "chunk_index": i,
@@ -187,6 +195,7 @@ pub async fn process_and_index_document(
                     "chunk_id": Uuid::new_v4().to_string(),
                     "doc_id": doc_id,
                     "collection_id": collection_id,
+                    "filename": filename,
                     "text": chunk,
                     "vector": null,
                     "chunk_index": i,
@@ -330,14 +339,17 @@ pub async fn prepare_rag_context(
     for (i, result) in filtered_results.iter().enumerate() {
         let text = result["text"].as_str().unwrap_or("");
         let doc_id = result["doc_id"].as_str().unwrap_or("");
+        let filename = result["filename"].as_str().unwrap_or("Document");
         let chunk_index = result["chunk_index"].as_u64().unwrap_or(0);
         let score = result["score"].as_f64().unwrap_or(0.0);
         total_score += score;
 
-        context_text.push_str(&format!("[Source {}] {}\n\n", i + 1, text));
+        context_text.push_str(&format!("[Source {} | {}] {}\n\n", i + 1, filename, text));
         citations.push(serde_json::json!({
             "id": i + 1,
             "doc_id": doc_id,
+            "filename": filename,
+            "text": text,
             "chunk_index": chunk_index,
             "score": score
         }));
@@ -362,7 +374,7 @@ pub async fn process_document(
     collection_id: String,
     file_path: String
 ) -> Result<ProcessedDocument, String> {
-    process_and_index_document(app, collection_id, file_path, None).await
+    process_and_index_document(app, collection_id, file_path, None, None, None).await
 }
 
 #[cfg(test)]
