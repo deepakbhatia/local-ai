@@ -1,6 +1,14 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
+export interface CollectionDocument {
+    id: string;        // doc_id returned by backend
+    name: string;      // filename
+    path: string;      // original file path
+    status: string;    // 'Indexed ✓' | 'Error' | 'Processing...'
+    addedAt: number;
+}
+
 export interface Collection {
     id: string;
     name: string;
@@ -8,6 +16,7 @@ export interface Collection {
     color: string;
     documentCount: number;
     createdAt: number;
+    documents: CollectionDocument[];   // ← persisted document list
 }
 
 interface CollectionsState {
@@ -18,6 +27,11 @@ interface CollectionsState {
     updateCollection: (id: string, updates: Partial<Collection>) => void;
     deleteCollection: (id: string) => void;
     incrementDocCount: (id: string, amount?: number) => void;
+
+    // Document management
+    addDocument: (collectionId: string, doc: CollectionDocument) => void;
+    updateDocumentStatus: (collectionId: string, docId: string, status: string) => void;
+    removeDocument: (collectionId: string, docId: string) => void;
 }
 
 export const useCollectionsStore = create<CollectionsState>()(
@@ -30,7 +44,8 @@ export const useCollectionsStore = create<CollectionsState>()(
                     description: 'A default collection for general documents.',
                     color: 'blue',
                     documentCount: 0,
-                    createdAt: Date.now()
+                    createdAt: Date.now(),
+                    documents: [],
                 }
             ],
 
@@ -43,7 +58,8 @@ export const useCollectionsStore = create<CollectionsState>()(
                         description,
                         color,
                         documentCount: 0,
-                        createdAt: Date.now()
+                        createdAt: Date.now(),
+                        documents: [],
                     }
                 ]
             })),
@@ -62,12 +78,48 @@ export const useCollectionsStore = create<CollectionsState>()(
                 collections: state.collections.map(c =>
                     c.id === id ? { ...c, documentCount: c.documentCount + amount } : c
                 )
-            }))
+            })),
+
+            addDocument: (collectionId, doc) => set((state) => ({
+                collections: state.collections.map(c =>
+                    c.id === collectionId
+                        ? {
+                            ...c,
+                            documents: [...(c.documents ?? []).filter(d => d.path !== doc.path), doc],
+                            documentCount: (c.documents ?? []).filter(d => d.path !== doc.path).length + 1,
+                        }
+                        : c
+                )
+            })),
+
+            updateDocumentStatus: (collectionId, docId, status) => set((state) => ({
+                collections: state.collections.map(c =>
+                    c.id === collectionId
+                        ? {
+                            ...c,
+                            documents: (c.documents ?? []).map(d =>
+                                (d.id === docId || d.path === docId) ? { ...d, status } : d
+                            )
+                        }
+                        : c
+                )
+            })),
+
+            removeDocument: (collectionId, docId) => set((state) => ({
+                collections: state.collections.map(c =>
+                    c.id === collectionId
+                        ? {
+                            ...c,
+                            documents: (c.documents ?? []).filter(d => d.id !== docId),
+                            documentCount: Math.max(0, c.documentCount - 1),
+                        }
+                        : c
+                )
+            })),
         }),
         {
             name: 'localmind-collections-storage',
             storage: createJSONStorage(() => localStorage),
-            // In MVP, we use localStorage for the metadata. Actual text/vectors go to LanceDB.
         }
     )
 );
