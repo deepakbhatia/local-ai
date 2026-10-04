@@ -1,0 +1,635 @@
+
+<style>
+  :root {
+    --bg: #0E0F11;
+    --surface: #16181C;
+    --surface2: #1E2026;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text1: #F0F0F2;
+    --text2: #9A9BA8;
+    --text3: #5A5B66;
+    --accent: #4F8EF7;
+    --accent-dim: rgba(79,142,247,0.12);
+    --accent-border: rgba(79,142,247,0.3);
+    --green: #3DD68C;
+    --green-dim: rgba(61,214,140,0.1);
+    --amber: #F0A429;
+    --font-ui: 'DM Sans', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=JetBrains+Mono:wght@400&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  .app-shell {
+    font-family: var(--font-ui);
+    background: var(--bg);
+    border-radius: 12px;
+    border: 0.5px solid var(--border2);
+    display: flex;
+    height: 640px;
+    overflow: hidden;
+    color: var(--text1);
+    font-size: 13px;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 200px;
+    min-width: 200px;
+    background: var(--surface);
+    border-right: 0.5px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 16px 0;
+  }
+  .sidebar-logo {
+    padding: 0 16px 16px;
+    border-bottom: 0.5px solid var(--border);
+    margin-bottom: 8px;
+  }
+  .sidebar-logo-mark {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logo-icon {
+    width: 24px; height: 24px;
+    background: var(--accent);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .logo-icon svg { width: 14px; height: 14px; }
+  .logo-name { font-size: 14px; font-weight: 500; color: var(--text1); }
+
+  .nav-section { padding: 4px 8px; flex: 1; }
+  .nav-label { font-size: 10px; font-weight: 500; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 8px 4px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 8px; border-radius: 6px; cursor: pointer;
+    color: var(--text2); transition: background 0.15s, color 0.15s;
+    user-select: none;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text1); }
+  .nav-item.active { background: var(--accent-dim); color: var(--accent); }
+  .nav-item svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .nav-item-label { font-size: 13px; }
+
+  .sidebar-footer {
+    padding: 12px 16px 0;
+    border-top: 0.5px solid var(--border);
+    margin-top: auto;
+  }
+  .model-status {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px;
+    background: var(--surface2);
+    border-radius: 8px;
+    border: 0.5px solid var(--border);
+  }
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green);
+    flex-shrink: 0;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .model-name { font-size: 11px; color: var(--text2); }
+  .model-speed { font-size: 10px; color: var(--text3); margin-top: 1px; }
+
+  /* ── Main content ── */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+  .topbar {
+    height: 48px; min-height: 48px;
+    background: var(--surface);
+    border-bottom: 0.5px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+  }
+  .mode-tabs { display: flex; gap: 2px; background: var(--surface2); border-radius: 8px; padding: 3px; }
+  .mode-tab {
+    padding: 5px 14px; border-radius: 6px; font-size: 12px; font-weight: 500;
+    cursor: pointer; color: var(--text2); transition: all 0.15s; user-select: none;
+  }
+  .mode-tab.active { background: var(--surface); color: var(--text1); }
+  .mode-tab:hover:not(.active) { color: var(--text1); }
+
+  .collection-pill {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 6px;
+    background: var(--surface2); border: 0.5px solid var(--border);
+    font-size: 12px; color: var(--text2); cursor: pointer;
+  }
+  .collection-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+  .privacy-badge {
+    margin-left: auto;
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; color: var(--green);
+    background: var(--green-dim);
+    padding: 3px 10px; border-radius: 20px;
+    border: 0.5px solid rgba(61,214,140,0.2);
+  }
+  .privacy-badge svg { width: 10px; height: 10px; }
+
+  /* ── Panel layouts ── */
+  .panels { flex: 1; display: flex; overflow: hidden; }
+
+  /* ── ASK MODE ── */
+  .ask-chat { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+  .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+  .chat-messages::-webkit-scrollbar { width: 4px; }
+  .chat-messages::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .msg-user { align-self: flex-end; max-width: 65%; }
+  .msg-user .bubble {
+    background: var(--accent);
+    color: #fff;
+    padding: 10px 14px; border-radius: 12px 12px 2px 12px;
+    font-size: 13px; line-height: 1.5;
+  }
+  .msg-ai { align-self: flex-start; max-width: 85%; }
+  .ai-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .ai-avatar {
+    width: 20px; height: 20px; border-radius: 5px;
+    background: var(--accent-dim); border: 0.5px solid var(--accent-border);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ai-avatar svg { width: 11px; height: 11px; color: var(--accent); }
+  .ai-label { font-size: 11px; color: var(--text3); }
+  .ai-bubble {
+    background: var(--surface2);
+    border: 0.5px solid var(--border);
+    padding: 12px 14px; border-radius: 2px 12px 12px 12px;
+    font-size: 13px; line-height: 1.65; color: var(--text1);
+  }
+  .cite {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; border-radius: 4px;
+    background: var(--accent-dim); border: 0.5px solid var(--accent-border);
+    font-size: 10px; font-weight: 500; color: var(--accent);
+    cursor: pointer; margin: 0 1px; vertical-align: middle;
+    transition: background 0.15s;
+  }
+  .cite:hover, .cite.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .confidence {
+    display: inline-flex; align-items: center; gap: 4px;
+    margin-top: 8px; font-size: 10px; color: var(--green);
+  }
+  .confidence-bar { display: flex; gap: 2px; }
+  .conf-seg { width: 16px; height: 3px; border-radius: 2px; background: var(--green); }
+  .conf-seg.dim { background: var(--border2); }
+
+  .chat-input-wrap {
+    padding: 12px 16px;
+    border-top: 0.5px solid var(--border);
+    background: var(--surface);
+  }
+  .chat-input-box {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface2); border: 0.5px solid var(--border2);
+    border-radius: 10px; padding: 8px 12px;
+  }
+  .chat-input-box input {
+    flex: 1; background: none; border: none; outline: none;
+    color: var(--text1); font-size: 13px; font-family: var(--font-ui);
+  }
+  .chat-input-box input::placeholder { color: var(--text3); }
+  .send-btn {
+    width: 28px; height: 28px; border-radius: 7px;
+    background: var(--accent); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .send-btn svg { width: 13px; height: 13px; color: #fff; }
+
+  /* Source panel */
+  .source-panel {
+    width: 300px; min-width: 300px;
+    border-left: 0.5px solid var(--border);
+    background: var(--surface);
+    display: flex; flex-direction: column;
+    transition: opacity 0.2s;
+  }
+  .source-header {
+    padding: 12px 14px;
+    border-bottom: 0.5px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .source-file { font-size: 11px; color: var(--text2); font-weight: 500; }
+  .source-page { font-size: 10px; color: var(--text3); margin-left: auto; }
+  .source-body { flex: 1; overflow-y: auto; padding: 14px; }
+  .source-passage {
+    font-size: 12px; line-height: 1.7; color: var(--text2);
+    border-left: 2px solid var(--accent);
+    padding-left: 10px; margin-bottom: 12px;
+  }
+  .source-highlight { background: rgba(79,142,247,0.15); color: var(--text1); border-radius: 2px; padding: 0 2px; }
+  .source-context { font-size: 11px; color: var(--text3); line-height: 1.6; }
+
+  /* ── WRITE MODE ── */
+  .write-context {
+    width: 220px; min-width: 220px;
+    border-right: 0.5px solid var(--border);
+    background: var(--surface);
+    display: flex; flex-direction: column;
+    padding: 14px;
+    gap: 10px;
+  }
+  .write-context-title { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; margin-bottom: 2px; }
+  .ctx-doc {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px; border-radius: 7px;
+    background: var(--surface2); border: 0.5px solid var(--border);
+  }
+  .ctx-doc svg { width: 13px; height: 13px; color: var(--text3); flex-shrink: 0; }
+  .ctx-doc-name { font-size: 11px; color: var(--text2); line-height: 1.3; }
+  .ctx-doc-pages { font-size: 10px; color: var(--text3); }
+  .ctx-add-btn {
+    display: flex; align-items: center; gap: 6px; justify-content: center;
+    padding: 7px; border-radius: 7px;
+    border: 0.5px dashed var(--border2); cursor: pointer;
+    font-size: 11px; color: var(--text3); transition: all 0.15s;
+  }
+  .ctx-add-btn:hover { border-color: var(--accent-border); color: var(--accent); }
+
+  .write-editor { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+  .editor-topbar {
+    padding: 10px 20px;
+    border-bottom: 0.5px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .template-chip {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; color: var(--text2);
+    background: var(--surface2); border: 0.5px solid var(--border);
+    padding: 3px 10px; border-radius: 5px;
+  }
+  .word-count { margin-left: auto; font-size: 11px; color: var(--text3); }
+  .editor-body { flex: 1; overflow-y: auto; padding: 24px 32px; }
+  .editor-body::-webkit-scrollbar { width: 4px; }
+  .editor-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .editor-meta { font-size: 11px; color: var(--text3); margin-bottom: 20px; display: flex; flex-direction: column; gap: 3px; }
+  .editor-h1 { font-size: 20px; font-weight: 500; color: var(--text1); margin-bottom: 16px; line-height: 1.3; }
+  .editor-h2 { font-size: 13px; font-weight: 500; color: var(--text2); margin: 18px 0 8px; text-transform: uppercase; letter-spacing: 0.06em; font-size: 10px; }
+  .editor-p { font-size: 13px; line-height: 1.75; color: var(--text1); margin-bottom: 12px; }
+  .editor-selection {
+    background: rgba(79,142,247,0.12);
+    border-radius: 2px;
+    position: relative;
+  }
+  .ai-toolbar {
+    display: inline-flex; gap: 2px;
+    background: var(--surface2); border: 0.5px solid var(--border2);
+    border-radius: 6px; padding: 3px;
+    margin-left: 8px; vertical-align: middle;
+  }
+  .ai-cmd {
+    padding: 3px 8px; border-radius: 4px; font-size: 10px;
+    color: var(--text2); cursor: pointer; transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .ai-cmd:hover { background: var(--accent-dim); color: var(--accent); }
+  .ai-cmd.primary { background: var(--accent); color: #fff; }
+  .cursor-blink {
+    display: inline-block; width: 2px; height: 14px;
+    background: var(--accent); vertical-align: middle; margin-left: 1px;
+    animation: blink 1s step-end infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  .suggestion-bar {
+    margin: 0 32px 16px;
+    background: var(--surface2); border: 0.5px solid var(--accent-border);
+    border-radius: 8px; overflow: hidden;
+  }
+  .suggestion-header {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 12px;
+    border-bottom: 0.5px solid var(--border);
+    background: var(--accent-dim);
+  }
+  .suggestion-label { font-size: 10px; color: var(--accent); font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; }
+  .suggestion-body { padding: 10px 12px; font-size: 12px; line-height: 1.6; color: var(--text2); }
+  .suggestion-actions { display: flex; gap: 6px; padding: 6px 12px 10px; }
+  .sug-btn {
+    padding: 4px 12px; border-radius: 5px; font-size: 11px; cursor: pointer; border: 0.5px solid var(--border2);
+    background: none; color: var(--text2); font-family: var(--font-ui); transition: all 0.15s;
+  }
+  .sug-btn.accept { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .sug-btn:hover:not(.accept) { background: var(--surface2); }
+
+  .hidden { display: none !important; }
+</style>
+
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-mark">
+        <div class="logo-icon">
+          <svg viewBox="0 0 14 14" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round">
+            <path d="M2 4h10M2 7h6M2 10h8"/>
+          </svg>
+        </div>
+        <span class="logo-name">LocalMind</span>
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Workspace</div>
+      <div class="nav-item" onclick="setNav(this,'dashboard')">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="5" height="5" rx="1"/><rect x="8" y="1" width="5" height="5" rx="1"/><rect x="1" y="8" width="5" height="5" rx="1"/><rect x="8" y="8" width="5" height="5" rx="1"/></svg>
+        <span class="nav-item-label">Dashboard</span>
+      </div>
+      <div class="nav-item active" id="nav-ask" onclick="setNav(this,'ask'); switchMode('ask')">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h10v8H8l-3 2V10H2V2z"/></svg>
+        <span class="nav-item-label">Ask</span>
+      </div>
+      <div class="nav-item" id="nav-write" onclick="setNav(this,'write'); switchMode('write')">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12l2-2 7-7-2-2-7 7-2 2zm7-9l2 2"/></svg>
+        <span class="nav-item-label">Write</span>
+      </div>
+      <div class="nav-item" onclick="setNav(this,'collections')">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 4h12M1 4c0-1 .5-2 2-2h8c1.5 0 2 1 2 2M3 4v8h8V4"/></svg>
+        <span class="nav-item-label">Collections</span>
+      </div>
+
+      <div class="nav-label" style="margin-top:8px;">Tools</div>
+      <div class="nav-item" onclick="setNav(this,'reports')">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 10V6l3-3 3 2 4-4"/><path d="M2 10h10"/></svg>
+        <span class="nav-item-label">Reports</span>
+      </div>
+      <div class="nav-item" onclick="setNav(this,'settings')">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="2"/><path d="M7 1v2M7 11v2M1 7h2M11 7h2M2.9 2.9l1.4 1.4M9.7 9.7l1.4 1.4M2.9 11.1l1.4-1.4M9.7 4.3l1.4-1.4"/></svg>
+        <span class="nav-item-label">Settings</span>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="model-status">
+        <div class="status-dot"></div>
+        <div>
+          <div class="model-name">Llama 3.1 8B</div>
+          <div class="model-speed">~34 tok/sec</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="mode-tabs">
+        <div class="mode-tab active" id="tab-ask" onclick="switchMode('ask')">Ask</div>
+        <div class="mode-tab" id="tab-write" onclick="switchMode('write')">Write</div>
+      </div>
+      <div class="collection-pill">
+        <div class="collection-dot"></div>
+        Smith v. Acme — Case Files
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4l3 3 3-3"/></svg>
+      </div>
+      <div class="privacy-badge">
+        <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 1L2 2.5v3C2 7.5 3.5 9 5 9.5 6.5 9 8 7.5 8 5.5v-3L5 1z"/></svg>
+        100% offline
+      </div>
+    </div>
+
+    <!-- ASK MODE PANELS -->
+    <div class="panels" id="ask-panel">
+
+      <!-- Chat -->
+      <div class="ask-chat">
+        <div class="chat-messages">
+
+          <div class="msg-user">
+            <div class="bubble">Does the NDA include a non-compete clause, and if so, what is the duration?</div>
+          </div>
+
+          <div class="msg-ai">
+            <div class="ai-header">
+              <div class="ai-avatar">
+                <svg viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5.5" cy="5.5" r="3"/><path d="M5.5 2.5v1M5.5 8v1M2.5 5.5h1M8 5.5h1"/></svg>
+              </div>
+              <span class="ai-label">LocalMind</span>
+            </div>
+            <div class="ai-bubble">
+              Yes. The NDA contains a non-compete clause under <span class="cite active" onclick="showCite(1)">1</span> <strong>Section 8.2 (Restrictive Covenants)</strong>. The duration is <strong>24 months</strong> from the date of termination of the agreement. <span class="cite" onclick="showCite(2)">2</span><br><br>
+              The clause restricts the receiving party from engaging in any substantially similar business activity within a <strong>50-mile radius</strong> of the disclosing party's primary place of business. <span class="cite" onclick="showCite(1)">1</span>
+              <div class="confidence">
+                <div class="confidence-bar">
+                  <div class="conf-seg"></div>
+                  <div class="conf-seg"></div>
+                  <div class="conf-seg"></div>
+                  <div class="conf-seg dim"></div>
+                </div>
+                High confidence · 3 sources
+              </div>
+            </div>
+          </div>
+
+          <div class="msg-user">
+            <div class="bubble">What are the termination conditions?</div>
+          </div>
+
+          <div class="msg-ai">
+            <div class="ai-header">
+              <div class="ai-avatar">
+                <svg viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5.5" cy="5.5" r="3"/><path d="M5.5 2.5v1M5.5 8v1M2.5 5.5h1M8 5.5h1"/></svg>
+              </div>
+              <span class="ai-label">LocalMind · typing</span>
+            </div>
+            <div class="ai-bubble" style="color:var(--text3);">
+              <span style="color:var(--text2);">Section 12 outlines three termination conditions</span><span class="cursor-blink"></span>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="chat-input-wrap">
+          <div class="chat-input-box">
+            <input type="text" placeholder="Ask anything about your documents…" />
+            <button class="send-btn">
+              <svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6.5h9M7.5 2.5l4 4-4 4"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Source panel -->
+      <div class="source-panel" id="source-panel">
+        <div class="source-header">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 1h8v10H2zM4 4h4M4 6h4M4 8h2"/></svg>
+          <span class="source-file">NDA_Client_Agreement_2024.pdf</span>
+          <span class="source-page">p. 7</span>
+        </div>
+        <div class="source-body">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:10px;display:flex;align-items:center;gap:4px;">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="5" r="3"/><path d="M5 3.5v2l1 1"/></svg>
+            Cited passage — Section 8.2
+          </div>
+          <div class="source-passage">
+            The parties acknowledge that the obligations set forth herein constitute reasonable protections of legitimate business interests. <span class="source-highlight">For a period of twenty-four (24) months following the termination of this Agreement, the Receiving Party shall not, directly or indirectly, engage in any business activity substantially similar to that of the Disclosing Party within a fifty (50) mile radius of the Disclosing Party's principal place of business.</span> This restriction shall apply regardless of the reason for termination.
+          </div>
+          <div style="margin-top:16px;font-size:10px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em;font-weight:500;">Related passages</div>
+          <div class="source-context">
+            <div style="padding:8px;background:var(--surface2);border-radius:6px;border:0.5px solid var(--border);margin-bottom:6px;cursor:pointer;" onclick="showCite(2)">
+              <div style="font-size:10px;color:var(--text3);margin-bottom:3px;">NDA_Client_Agreement_2024.pdf · p.11</div>
+              Section 12.1 — Either party may terminate this agreement with 30 days written notice…
+            </div>
+            <div style="padding:8px;background:var(--surface2);border-radius:6px;border:0.5px solid var(--border);cursor:pointer;">
+              <div style="font-size:10px;color:var(--text3);margin-bottom:3px;">Exhibit_A_Definitions.pdf · p.2</div>
+              "Substantially similar business activity" shall mean any enterprise that…
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WRITE MODE PANELS -->
+    <div class="panels hidden" id="write-panel">
+
+      <!-- Context docs -->
+      <div class="write-context">
+        <div class="write-context-title">Context</div>
+
+        <div class="ctx-doc">
+          <svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 1h9v11H2zM4 4h5M4 6h5M4 8h3"/></svg>
+          <div>
+            <div class="ctx-doc-name">Interview_notes_JSmith.pdf</div>
+            <div class="ctx-doc-pages">14 pages · indexed</div>
+          </div>
+        </div>
+        <div class="ctx-doc">
+          <svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 1h9v11H2zM4 4h5M4 6h5M4 8h3"/></svg>
+          <div>
+            <div class="ctx-doc-name">Case_summary_v3.docx</div>
+            <div class="ctx-doc-pages">6 pages · indexed</div>
+          </div>
+        </div>
+        <div class="ctx-doc">
+          <svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 1h9v11H2zM4 4h5M4 6h5M4 8h3"/></svg>
+          <div>
+            <div class="ctx-doc-name">Deposition_Acme_CEO.pdf</div>
+            <div class="ctx-doc-pages">32 pages · indexed</div>
+          </div>
+        </div>
+
+        <div class="ctx-add-btn">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2v8M2 6h8"/></svg>
+          Add document
+        </div>
+
+        <div style="margin-top:auto;padding-top:12px;border-top:0.5px solid var(--border);">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em;font-weight:500;">AI commands</div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <div style="padding:6px 8px;border-radius:6px;background:var(--surface2);border:0.5px solid var(--border);font-size:11px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:6px;">
+              <span style="font-size:10px;color:var(--text3);font-family:monospace;">⌘K</span> Expand paragraph
+            </div>
+            <div style="padding:6px 8px;border-radius:6px;background:var(--surface2);border:0.5px solid var(--border);font-size:11px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:6px;">
+              <span style="font-size:10px;color:var(--text3);font-family:monospace;">⌘J</span> Rewrite formally
+            </div>
+            <div style="padding:6px 8px;border-radius:6px;background:var(--surface2);border:0.5px solid var(--border);font-size:11px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:6px;">
+              <span style="font-size:10px;color:var(--text3);font-family:monospace;">⌘H</span> Summarise context
+            </div>
+            <div style="padding:6px 8px;border-radius:6px;background:var(--surface2);border:0.5px solid var(--border);font-size:11px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:6px;">
+              <span style="font-size:10px;color:var(--text3);font-family:monospace;">⌘E</span> Extract key facts
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Editor -->
+      <div class="write-editor">
+        <div class="editor-topbar">
+          <div class="template-chip">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="8" height="8" rx="1"/><path d="M3 4h4M3 6h2"/></svg>
+            Legal memo
+          </div>
+          <div style="font-size:11px;color:var(--text3);">Draft · auto-saved 2m ago</div>
+          <div class="word-count">342 words</div>
+          <button style="margin-left:8px;padding:4px 12px;border-radius:6px;background:var(--accent);border:none;color:#fff;font-size:11px;cursor:pointer;font-family:var(--font-ui);">Export</button>
+        </div>
+
+        <div class="editor-body">
+          <div class="editor-meta">
+            <span><strong style="color:var(--text2);">To:</strong> Sarah Chen, Partner</span>
+            <span><strong style="color:var(--text2);">From:</strong> J. Miller, Associate</span>
+            <span><strong style="color:var(--text2);">Re:</strong> Smith v. Acme Corp — Breach of Contract Analysis</span>
+            <span><strong style="color:var(--text2);">Date:</strong> March 28, 2026</span>
+          </div>
+
+          <div class="editor-h1">Memorandum</div>
+
+          <div class="editor-h2">Summary of facts</div>
+          <div class="editor-p">
+            This memorandum analyzes the breach of contract claim arising from Acme Corp's alleged failure to deliver goods per the Supply Agreement dated January 15, 2024. Based on the deposition of Acme's CEO and supporting documentation, three material breaches have been identified.
+          </div>
+
+          <div class="editor-h2">Legal analysis</div>
+          <div class="editor-p">
+            Under New York contract law, a material breach occurs when the non-breaching party receives something substantially different from what was promised. <span class="editor-selection">The deposition testimony of Acme's CEO confirms that the company was aware of supply chain delays as early as November 2023 yet failed to notify the plaintiff within the contractually required 48-hour window.</span>
+            <span class="ai-toolbar">
+              <span class="ai-cmd primary">Expand</span>
+              <span class="ai-cmd">Cite</span>
+              <span class="ai-cmd">Rewrite</span>
+            </span>
+          </div>
+
+          <div class="editor-p" style="color:var(--text3);">
+            Consequently, Smith may pursue remedies including...<span class="cursor-blink"></span>
+          </div>
+        </div>
+
+        <div class="suggestion-bar">
+          <div class="suggestion-header">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="5" r="3"/><path d="M5 3v2.5l1.5 1"/></svg>
+            <span class="suggestion-label">AI suggestion · expanding paragraph</span>
+          </div>
+          <div class="suggestion-body">
+            This failure to disclose constitutes a breach of the notice provision under Section 7.3, and courts have consistently held that timely notification is a condition precedent to performance. Smith's reliance on the expected delivery schedule resulted in documented downstream losses totalling $284,000.
+          </div>
+          <div class="suggestion-actions">
+            <button class="sug-btn accept">Accept</button>
+            <button class="sug-btn">Retry</button>
+            <button class="sug-btn">Discard</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  function switchMode(mode) {
+    document.getElementById('ask-panel').classList.toggle('hidden', mode !== 'ask');
+    document.getElementById('write-panel').classList.toggle('hidden', mode !== 'write');
+    document.getElementById('tab-ask').classList.toggle('active', mode === 'ask');
+    document.getElementById('tab-write').classList.toggle('active', mode === 'write');
+    document.getElementById('nav-ask').classList.toggle('active', mode === 'ask');
+    document.getElementById('nav-write').classList.toggle('active', mode === 'write');
+    var collPill = document.querySelector('.collection-pill');
+    collPill.innerHTML = mode === 'ask'
+      ? '<div class="collection-dot"></div>Smith v. Acme — Case Files<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4l3 3 3-3"/></svg>'
+      : '<div class="collection-dot"></div>Smith v. Acme — Draft Memo<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4l3 3 3-3"/></svg>';
+  }
+
+  function setNav(el, id) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function showCite(n) {
+    document.querySelectorAll('.cite').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.cite').forEach(c => { if(c.textContent == n) c.classList.add('active'); });
+  }
+</script>
