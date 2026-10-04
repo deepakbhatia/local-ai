@@ -57,6 +57,9 @@
                 "general",
                 "consulting"
             ],
+            "recommendedFor": [
+                "general"
+            ],
             "description": "Strong reasoning, smaller footprint."
         },
         {
@@ -81,6 +84,9 @@
             "verticals": [
                 "general",
                 "research"
+            ],
+            "recommendedFor": [
+                "general"
             ],
             "description": "Near GPT-4 quality for power users."
         },
