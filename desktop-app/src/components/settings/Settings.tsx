@@ -12,7 +12,9 @@ import {
     Briefcase,
     Languages,
     Activity,
-    Paintbrush
+    Paintbrush,
+    MessageSquare,
+    Info
 } from 'lucide-react';
 import { useOnboardingStore, Vertical } from '../../store/onboarding';
 import { useTranslation } from 'react-i18next';
@@ -20,11 +22,14 @@ import { useTranslation } from 'react-i18next';
 import modelsConfig from '../../config/models.json';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { check } from '@tauri-apps/plugin-updater';
+import { relaunch } from '@tauri-apps/plugin-process';
 
-type SettingsTab = 'profile' | 'model' | 'vertical' | 'privacy' | 'data' | 'advanced';
+type SettingsTab = 'profile' | 'model' | 'vertical' | 'privacy' | 'data' | 'advanced' | 'feedback' | 'about';
 
 const AdvancedSettings: React.FC = () => {
     const [logs, setLogs] = useState<string[]>([]);
+    const [updating, setUpdating] = useState(false);
 
     useEffect(() => {
         const fetchLogs = async () => {
@@ -33,6 +38,26 @@ const AdvancedSettings: React.FC = () => {
         };
         fetchLogs();
     }, []);
+
+    const checkForUpdates = async () => {
+        setUpdating(true);
+        try {
+            const update = await check();
+            if (update) {
+                if (confirm(`Update v${update.version} is available. Install and restart now?`)) {
+                    await update.downloadAndInstall();
+                    await relaunch();
+                }
+            } else {
+                alert("LocalMind is already up to date.");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Failed to check for updates: " + e);
+        } finally {
+            setUpdating(false);
+        }
+    };
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -79,6 +104,121 @@ const AdvancedSettings: React.FC = () => {
                     </div>
                 </div>
             </section>
+
+            <section className="pt-6 border-t border-border">
+                <h3 className="text-lg font-semibold flex items-center gap-2 mb-2">
+                    <Activity size={20} className="text-accent" /> Software Updates
+                </h3>
+                <p className="text-sm text-text-muted mb-4">Check for the latest version of LocalMind.</p>
+                <button 
+                    onClick={checkForUpdates}
+                    disabled={updating}
+                    className="px-6 py-2.5 bg-accent text-white rounded-lg text-sm font-bold shadow-lg shadow-accent/20 hover:bg-accent/90 transition-all disabled:opacity-50"
+                >
+                    {updating ? "Checking..." : "Check for Updates"}
+                </button>
+            </section>
+        </div>
+    );
+};
+
+const FeedbackSettings: React.FC = () => {
+    const [feedback, setFeedback] = useState('');
+    const [submitted, setSubmitted] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        // For beta, we'll log it and show a success state
+        console.log("Feedback submitted:", feedback);
+        setSubmitted(true);
+        setFeedback('');
+    };
+
+    if (submitted) {
+        return (
+            <div className="flex flex-col items-center justify-center p-12 text-center animate-in fade-in duration-500">
+                <div className="w-16 h-16 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mb-4">
+                    <Activity size={32} />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Thank you!</h3>
+                <p className="text-text-secondary text-sm">Your feedback helps us make LocalMind better. No personal data was collected.</p>
+                <button onClick={() => setSubmitted(false)} className="mt-6 text-accent text-sm font-bold hover:underline">Send another report</button>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <section className="space-y-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <MessageSquare size={20} className="text-accent" /> Beta Feedback
+                </h3>
+                <p className="text-sm text-text-muted">Tell us about bugs, feature requests, or your general experience. All feedback is anonymised.</p>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <textarea 
+                        value={feedback}
+                        onChange={(e) => setFeedback(e.target.value)}
+                        placeholder="What's on your mind?..."
+                        className="w-full h-32 bg-surface border border-border rounded-xl p-4 text-sm focus:outline-none focus:ring-1 focus:ring-accent resize-none"
+                        required
+                    />
+                    <button type="submit" className="bg-accent text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow-lg shadow-accent/20 hover:bg-accent/90 transition-all flex items-center gap-2">
+                         Send Feedback
+                    </button>
+                </form>
+            </section>
+        </div>
+    );
+};
+
+const AboutSettings: React.FC = () => {
+    return (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <section className="text-center py-6">
+                <div className="w-20 h-20 bg-accent/10 text-accent rounded-3xl flex items-center justify-center mx-auto mb-4 rotate-3 hover:rotate-0 transition-transform duration-500">
+                    <Shield size={40} />
+                </div>
+                <h2 className="text-3xl font-bold tracking-tighter">LocalMind</h2>
+                <p className="text-text-muted text-sm font-mono mt-1">v0.1.0-beta</p>
+            </section>
+
+            <section className="space-y-4 pt-6 border-t border-border">
+                <h3 className="text-lg font-semibold">The Mission</h3>
+                <p className="text-sm text-text-secondary leading-relaxed">
+                    LocalMind was built to bridge the gap between powerful AI capabilities and absolute data sovereignty. 
+                    In a world of cloud-first intelligence, we believe your professional research, legal counsel, and personal drafts 
+                    should never leave your hardware.
+                </p>
+            </section>
+
+            <section className="space-y-4 pt-6 border-t border-border">
+                <h3 className="text-lg font-semibold">Open Source Acknowledgements</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {[
+                        { name: "Ollama", desc: "Local inference engine", link: "ollama.com" },
+                        { name: "Tauri", desc: "Next-gen desktop framework", link: "tauri.app" },
+                        { name: "LanceDB", desc: "Vector database for AI", link: "lancedb.com" },
+                        { name: "Lucide", desc: "Beautiful vector icons", link: "lucide.dev" },
+                    ].map(lib => (
+                        <a key={lib.name} href={`https://${lib.link}`} target="_blank" rel="noreferrer" className="p-3 bg-surface border border-border rounded-xl hover:border-accent group transition-all">
+                            <div className="flex items-center justify-between">
+                                <span className="font-bold text-sm tracking-tight group-hover:text-accent">{lib.name}</span>
+                                <ExternalLink size={12} className="text-text-muted" />
+                            </div>
+                            <div className="text-[10px] text-text-muted">{lib.desc}</div>
+                        </a>
+                    ))}
+                </div>
+            </section>
+
+            <section className="space-y-4 pt-6 border-t border-border">
+                <h3 className="text-lg font-semibold">Licence</h3>
+                <p className="text-xs text-text-muted bg-surface p-4 rounded-xl font-mono leading-relaxed">
+                    MIT License<br/><br/>
+                    Copyright (c) 2026 LocalMind Contributors<br/><br/>
+                    Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software...
+                </p>
+            </section>
         </div>
     );
 };
@@ -111,22 +251,44 @@ const ModelSettings: React.FC = () => {
     const handleDownload = async (modelPullCommand: string) => {
         setDownloadingModelId(modelPullCommand);
 
-        const unlisten = await listen<any>(`download-progress-${modelPullCommand}`, (event) => {
-            setProgress({
-                completed: event.payload.completed,
-                total: event.payload.total,
-                status: event.payload.status
-            });
-        });
-
         try {
+            const sanitizeEventName = (name: string) => name.replace(/[^a-zA-Z0-9-]/g, '-');
+            const chunks: Record<string, { completed: number, total: number }> = {};
+            
+            const unlisten = await listen<any>(`download-progress-${sanitizeEventName(modelPullCommand)}`, (event) => {
+                const { digest, completed, total, status } = event.payload;
+                
+                if (digest && total > 0) {
+                    chunks[digest] = { completed, total };
+                    let tmpTotal = 0;
+                    let tmpCompleted = 0;
+                    Object.values(chunks).forEach(c => {
+                        tmpTotal += c.total;
+                        tmpCompleted += c.completed;
+                    });
+                    
+                    setProgress(prev => {
+                        const newPct = Math.round((tmpCompleted / tmpTotal) * 100);
+                        // Convert to raw numbers for state
+                        return { 
+                            completed: Math.max(prev.completed, newPct), 
+                            total: 100, 
+                            status 
+                        };
+                    });
+                } else {
+                    setProgress(prev => ({ ...prev, status }));
+                }
+            });
+
             await invoke('download_model', { modelName: modelPullCommand });
             refreshInstalled();
+            unlisten();
         } catch (e) {
             console.error(e);
+            alert(`Download error: ${e}`);
         } finally {
             setDownloadingModelId(null);
-            unlisten();
         }
     };
 
@@ -140,6 +302,22 @@ const ModelSettings: React.FC = () => {
             console.error(e);
         } finally {
             setIsBenchmarking(false);
+        }
+    };
+
+    const handleDelete = async (modelId: string) => {
+        if (!confirm(`Are you sure you want to delete ${modelId} from your device?`)) return;
+        try {
+            await invoke('delete_model', { modelName: modelId });
+            refreshInstalled();
+            
+            // If they deleted the active model, fall back safely
+            if (selectedModelId === modelsConfig.models.find(m => m.pullCommand === modelId)?.id) {
+                setSelectedModelId(modelsConfig.models[0].id);
+            }
+        } catch (e) {
+            console.error(e);
+            alert(`Failed to delete model: ${e}`);
         }
     };
 
@@ -215,6 +393,13 @@ const ModelSettings: React.FC = () => {
                                                 )}
                                             >
                                                 {isSelected ? "Active" : "Use"}
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(m.pullCommand)}
+                                                className="w-7 h-7 flex items-center justify-center rounded-lg border border-border text-text-muted hover:bg-red-500/10 hover:text-red-500 hover:border-red-500 transition-colors"
+                                                title="Delete Model"
+                                            >
+                                                <Trash2 size={14} />
                                             </button>
                                         </>
                                     ) : (
@@ -405,6 +590,10 @@ export const Settings: React.FC = () => {
                 return <AdvancedSettings />;
             case 'model':
                 return <ModelSettings />;
+            case 'feedback':
+                return <FeedbackSettings />;
+            case 'about':
+                return <AboutSettings />;
             default:
                 return (
                     <div className="p-12 text-center text-text-muted opacity-50 flex flex-col items-center">
@@ -422,6 +611,8 @@ export const Settings: React.FC = () => {
         { id: 'privacy', label: 'Privacy', icon: <Shield size={16} /> },
         { id: 'data', label: 'Data', icon: <Download size={16} /> },
         { id: 'advanced', label: 'Advanced', icon: <Activity size={16} /> },
+        { id: 'feedback', label: 'Feedback', icon: <MessageSquare size={16} /> },
+        { id: 'about', label: 'About', icon: <Info size={16} /> },
     ];
 
     return (

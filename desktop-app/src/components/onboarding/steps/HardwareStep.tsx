@@ -37,12 +37,12 @@ export const HardwareStep: React.FC = () => {
         // Filter models by tier
         const eligible = modelsConfig.models.filter(m => m.tier <= tier);
 
-        // Find best match for vertical
-        const verticalMatch = eligible.find(m => m.recommendedFor?.includes(vertical));
+        // Find best match for vertical (highest tier first)
+        const verticalMatch = [...eligible].reverse().find(m => m.recommendedFor?.includes(vertical));
         if (verticalMatch) return verticalMatch;
 
-        // Fallback to highest tier available for general
-        return eligible.reverse()[0] || modelsConfig.models[0];
+        // Fallback to highest tier available
+        return [...eligible].reverse()[0] || modelsConfig.models[0];
     };
 
     const handleContinue = () => {

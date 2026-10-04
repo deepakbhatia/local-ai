@@ -8,6 +8,7 @@ import { clsx } from 'clsx';
 
 interface ProgressPayload {
     status: string;
+    digest?: string;
     completed: number;
     total: number;
 }
@@ -25,6 +26,8 @@ export const DownloadStep: React.FC = () => {
     const [embedError, setEmbedError] = useState<string | null>(null);
 
     const modelStarted = useRef(false);
+    const modelChunks = useRef<Record<string, { completed: number, total: number }>>({});
+    const embedChunks = useRef<Record<string, { completed: number, total: number }>>({});
 
     useEffect(() => {
         if (!selectedModelId || modelStarted.current) return;
@@ -36,44 +39,69 @@ export const DownloadStep: React.FC = () => {
 
         const startDownloads = async () => {
             try {
+                const sanitizeEventName = (name: string) => name.replace(/[^a-zA-Z0-9-]/g, '-');
+
                 // Setup listeners first
-                unlistenModel = await listen<ProgressPayload>(`download-progress-${selectedModelId}`, (event) => {
-                    if (event.payload.total > 0) {
-                        const pct = Math.round((event.payload.completed / event.payload.total) * 100);
-                        setModelProgress(Math.min(100, pct));
+                unlistenModel = await listen<ProgressPayload>(`download-progress-${sanitizeEventName(selectedModelId)}`, (event) => {
+                    const { digest, completed, total, status } = event.payload;
+                    
+                    if (digest && total > 0) {
+                        modelChunks.current[digest] = { completed, total };
+                        let totalSum = 0;
+                        let completedSum = 0;
+                        Object.values(modelChunks.current).forEach(chunk => {
+                            totalSum += chunk.total;
+                            completedSum += chunk.completed;
+                        });
+                        const pct = Math.round((completedSum / totalSum) * 100);
+                        setModelProgress(prev => Math.max(prev, Math.min(100, pct)));
                     }
-                    setModelStatus(event.payload.status);
-                    if (event.payload.status.includes('success')) {
+                    
+                    setModelStatus(status);
+                    if (status.includes('success')) {
                         setModelDone(true);
                         setModelProgress(100);
                     }
                 });
 
-                unlistenEmbed = await listen<ProgressPayload>(`download-progress-${embeddingModelId}`, (event) => {
-                    if (event.payload.total > 0) {
-                        const pct = Math.round((event.payload.completed / event.payload.total) * 100);
-                        setEmbedProgress(Math.min(100, pct));
+                unlistenEmbed = await listen<ProgressPayload>(`download-progress-${sanitizeEventName(embeddingModelId)}`, (event) => {
+                    const { digest, completed, total, status } = event.payload;
+                    
+                    if (digest && total > 0) {
+                        embedChunks.current[digest] = { completed, total };
+                        let totalSum = 0;
+                        let completedSum = 0;
+                        Object.values(embedChunks.current).forEach(chunk => {
+                            totalSum += chunk.total;
+                            completedSum += chunk.completed;
+                        });
+                        const pct = Math.round((completedSum / totalSum) * 100);
+                        setEmbedProgress(prev => Math.max(prev, Math.min(100, pct)));
                     }
-                    setEmbedStatus(event.payload.status);
-                    if (event.payload.status.includes('success')) {
+                    
+                    setEmbedStatus(status);
+                    if (status.includes('success')) {
                         setEmbedDone(true);
                         setEmbedProgress(100);
                     }
                 });
 
-                // Trigger the backend to start pulling
-                // We do these sequentially for UI simplicity and less network congestion
+                // Trigger the backend to start pulling in parallel!
                 setModelStatus('Initializing download...');
-                await invoke('download_model', { modelName: selectedModelId });
-                setModelDone(true);
-                setModelProgress(100);
-                setModelStatus('Download complete');
-
                 setEmbedStatus('Initializing download...');
-                await invoke('download_model', { modelName: embeddingModelId });
-                setEmbedDone(true);
-                setEmbedProgress(100);
-                setEmbedStatus('Download complete');
+                
+                await Promise.all([
+                    invoke('download_model', { modelName: selectedModelId }).then(() => {
+                        setModelDone(true);
+                        setModelProgress(100);
+                        setModelStatus('Download complete');
+                    }),
+                    invoke('download_model', { modelName: embeddingModelId }).then(() => {
+                        setEmbedDone(true);
+                        setEmbedProgress(100);
+                        setEmbedStatus('Download complete');
+                    })
+                ]);
 
             } catch (err: any) {
                 console.error("Download failed:", err);
@@ -162,10 +190,23 @@ export const DownloadStep: React.FC = () => {
 
             </div>
 
-            <div className="flex justify-end items-center mt-8 border-t border-border pt-6">
+            <div className="flex justify-end items-center mt-8 border-t border-border pt-6 gap-4">
+                {(modelError || embedError) && (
+                    <button
+                        onClick={() => {
+                            setModelDone(true);
+                            setModelProgress(100);
+                            setEmbedDone(true);
+                            setEmbedProgress(100);
+                        }}
+                        className="px-6 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold rounded-sm transition-colors text-sm"
+                    >
+                        Skip Download (Dev Mode)
+                    </button>
+                )}
                 <button
                     onClick={nextStep}
-                    disabled={!allDone}
+                    disabled={!allDone && !(modelError || embedError)}
                     className="px-8 py-2.5 bg-accent hover:bg-accent/90 text-white font-medium rounded-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {allDone ? 'Continue' : 'Downloading...'}
