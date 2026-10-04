@@ -60,11 +60,12 @@ export const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onN
         }, 0);
 
         // Recent activity: combined last 5 chat messages and last 5 drafts
-        type ActivityItem = { type: 'ask' | 'write'; content: string; timestamp: number; sessionTitle: string };
+        type ActivityItem = { type: 'ask' | 'write'; id: string; content: string; timestamp: number; sessionTitle: string };
 
         const askActivities: ActivityItem[] = sessions
             .flatMap(s => s.messages.filter(m => m.role === 'user').map(m => ({
                 type: 'ask' as const,
+                id: s.id,
                 content: m.content,
                 timestamp: m.timestamp,
                 sessionTitle: s.title
@@ -72,6 +73,7 @@ export const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onN
 
         const writeActivities: ActivityItem[] = drafts.map(d => ({
             type: 'write' as const,
+            id: d.id,
             content: d.title,
             timestamp: d.updatedAt,
             sessionTitle: 'Draft'
@@ -180,7 +182,19 @@ export const Overview: React.FC<{ onNavigate: (view: string) => void }> = ({ onN
                     <h3 className="text-sm font-bold uppercase tracking-widest text-text-muted">Recent Activity</h3>
                     <div className="bg-surface border border-border rounded-xl divide-y divide-border overflow-hidden">
                         {stats.recentActivity.map((activity, i) => (
-                            <div key={i} className="p-4 flex items-center justify-between hover:bg-surface-elevated transition-colors cursor-pointer">
+                            <div 
+                                key={i} 
+                                onClick={() => {
+                                    if (activity.type === 'ask') {
+                                        useAskStore.setState({ activeSessionId: activity.id });
+                                        onNavigate('ask');
+                                    } else {
+                                        useWriteStore.setState({ activeDraftId: activity.id });
+                                        onNavigate('write');
+                                    }
+                                }}
+                                className="p-4 flex items-center justify-between hover:bg-surface-elevated transition-colors cursor-pointer"
+                            >
                                 <div className="flex items-center gap-4 truncate">
                                     <div className={clsx(
                                         "w-8 h-8 rounded-full flex items-center justify-center text-white",

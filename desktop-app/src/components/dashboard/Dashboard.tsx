@@ -29,11 +29,24 @@ export const Dashboard: React.FC = () => {
     const { name, organization, selectedModelId } = useOnboardingStore();
     const [activeView, setActiveView] = useState<string>('overview');
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [showNewColModal, setShowNewColModal] = useState(false);
+    const [newColName, setNewColName] = useState('');
+    const [newColDesc, setNewColDesc] = useState('');
 
     const getInitials = (n: string) => n.substring(0, 2).toUpperCase() || 'LM';
+    const { addCollection } = useCollectionsStore();
+
+    const handleCreateCollection = () => {
+        if (!newColName.trim()) return;
+        addCollection(newColName.trim(), newColDesc.trim() || 'A private collection.', 'blue');
+        setNewColName('');
+        setNewColDesc('');
+        setShowNewColModal(false);
+    };
 
     return (
-        <div className="flex bg-background text-text-primary h-screen w-full font-sans overflow-hidden">
+        <>
+            <div className="flex bg-background text-text-primary h-screen w-full font-sans overflow-hidden">
 
             {/* Sidebar */}
             <div className={clsx(
@@ -190,15 +203,18 @@ export const Dashboard: React.FC = () => {
 
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col bg-background overflow-hidden relative">
-                {/* Global Privacy Gradient */}
-                <div className="absolute top-0 end-0 p-4 z-50 pointer-events-none">
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-full text-[10px] font-bold uppercase tracking-widest text-green-500 backdrop-blur-md">
-                        <ShieldCheck size={12} /> 100% Offline
-                    </div>
-                </div>
 
-                <div className="flex-1 overflow-y-auto custom-scrollbar">
-                    <div className="p-10 max-w-6xl mx-auto w-full">
+
+                <div className={clsx(
+                    "flex-1 flex flex-col w-full mx-auto",
+                    (activeView === 'ask' || activeView === 'write') 
+                        ? "p-6 max-w-full" 
+                        : "p-10 max-w-6xl overflow-y-auto custom-scrollbar"
+                )}>
+                    <div className={clsx(
+                        "w-full",
+                        (activeView === 'ask' || activeView === 'write') ? "flex-1 min-h-0 flex flex-col" : ""
+                    )}>
 
                         {activeView === 'overview' && (
                             <Overview onNavigate={setActiveView} />
@@ -214,7 +230,10 @@ export const Dashboard: React.FC = () => {
                                         <h1 className="text-4xl font-bold tracking-tight mb-2">Collections</h1>
                                         <p className="text-text-secondary">Organize and manage your private data for AI grounding.</p>
                                     </div>
-                                    <button className="flex items-center gap-2 px-6 py-2.5 bg-accent hover:bg-accent/90 text-white font-bold rounded-lg transition-all text-sm shadow-lg shadow-accent/25 active:scale-95">
+                                    <button
+                                        onClick={() => setShowNewColModal(true)}
+                                        className="flex items-center gap-2 px-6 py-2.5 bg-accent hover:bg-accent/90 text-white font-bold rounded-lg transition-all text-sm shadow-lg shadow-accent/25 active:scale-95"
+                                    >
                                         <FolderPlus size={18} /> New Collection
                                     </button>
                                 </div>
@@ -291,5 +310,59 @@ export const Dashboard: React.FC = () => {
             </div>
 
         </div>
+
+            {/* New Collection Modal */}
+            {showNewColModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowNewColModal(false)}>
+                    <div
+                        className="bg-surface border border-border rounded-2xl p-8 w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <h2 className="text-2xl font-bold mb-1">New Collection</h2>
+                        <p className="text-text-secondary text-sm mb-6">Give your collection a name and optional description.</p>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-widest text-text-muted mb-1.5">Name *</label>
+                                <input
+                                    autoFocus
+                                    value={newColName}
+                                    onChange={e => setNewColName(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleCreateCollection()}
+                                    placeholder="e.g. Research Papers"
+                                    className="w-full bg-background border border-border rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-widest text-text-muted mb-1.5">Description</label>
+                                <input
+                                    value={newColDesc}
+                                    onChange={e => setNewColDesc(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleCreateCollection()}
+                                    placeholder="What will you store here?"
+                                    className="w-full bg-background border border-border rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 mt-8">
+                            <button
+                                onClick={handleCreateCollection}
+                                disabled={!newColName.trim()}
+                                className="flex-1 py-2.5 bg-accent hover:bg-accent/90 disabled:opacity-40 text-white font-bold rounded-lg transition-all text-sm"
+                            >
+                                Create Collection
+                            </button>
+                            <button
+                                onClick={() => setShowNewColModal(false)}
+                                className="px-6 py-2.5 border border-border hover:bg-surface-elevated text-text-secondary font-medium rounded-lg transition-all text-sm"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
     );
 };
