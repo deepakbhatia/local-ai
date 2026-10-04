@@ -446,12 +446,12 @@ export const Settings: React.FC = () => {
     const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
 
     const verticals: { id: Vertical; label: string; icon: React.ReactNode }[] = [
-        { id: 'general', label: 'General', icon: <Briefcase size={20} /> },
         { id: 'legal', label: 'Legal Counsel', icon: <Briefcase size={20} /> },
-        { id: 'medical', label: 'Medical Research', icon: <Briefcase size={20} /> },
-        { id: 'finance', label: 'Financial Analysis', icon: <Briefcase size={20} /> },
-        { id: 'research', label: 'Academic Research', icon: <Briefcase size={20} /> },
         { id: 'consulting', label: 'Strategy Consulting', icon: <Briefcase size={20} /> },
+        { id: 'research', label: 'Academic Research', icon: <Briefcase size={20} /> },
+        { id: 'general', label: 'General', icon: <Briefcase size={20} /> },
+        { id: 'finance', label: 'Financial Analysis', icon: <Briefcase size={20} /> },
+        { id: 'medical', label: 'Medical Research', icon: <Briefcase size={20} /> },
     ];
 
     const changeLanguage = (lng: string) => {
