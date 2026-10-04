@@ -1,187 +1,112 @@
 {
     "models": [
         {
-            "id": "llama3.1:8b",
-            "name": "Llama 3.1 8B",
-            "pullCommand": "llama3.1:8b",
-            "sizeGB": 4.7,
-            "minRAM": 8,
-            "tier": 1,
-            "verticals": [
-                "general",
-                "consulting",
-                "research"
-            ],
-            "recommendedFor": [
-                "general",
-                "consulting"
-            ],
-            "description": "Best general quality, most tested."
+            "id": "qwen3.5:0.8b",
+            "name": "Qwen3.5 0.8B",
+            "pullCommand": "qwen3.5:0.8b",
+            "sizeGB": 1.0,
+            "minRAM": 4,
+            "tier": 0,
+            "profile": "ultra-lite",
+            "verticals": ["legal", "general"],
+            "recommendedFor": ["legal"],
+            "description": "Ultra-lite floor for low-RAM machines. Short extract and rewrite only."
         },
         {
-            "id": "gemma3:4b",
-            "name": "Gemma 3 4B",
-            "pullCommand": "gemma3:4b",
-            "sizeGB": 3.0,
-            "minRAM": 6,
-            "tier": 0,
-            "verticals": [
-                "general"
-            ],
-            "description": "Low-spec machines, fast response."
+            "id": "qwen3.5:4b",
+            "name": "Qwen3.5 4B",
+            "pullCommand": "qwen3.5:4b",
+            "sizeGB": 3.4,
+            "minRAM": 8,
+            "tier": 1,
+            "profile": "lite",
+            "verticals": ["legal", "general", "consulting", "research"],
+            "recommendedFor": ["legal"],
+            "description": "Lite default. Fast matter Q&A on 8–16GB machines."
+        },
+        {
+            "id": "qwen3.5:9b",
+            "name": "Qwen3.5 9B",
+            "pullCommand": "qwen3.5:9b",
+            "sizeGB": 6.6,
+            "minRAM": 16,
+            "tier": 2,
+            "profile": "standard",
+            "verticals": ["legal", "general", "consulting", "research"],
+            "recommendedFor": ["legal", "general", "consulting"],
+            "description": "Recommended for most lawyers. Strong drafting and instruction following."
         },
         {
             "id": "gemma3:12b",
             "name": "Gemma 3 12B",
             "pullCommand": "gemma3:12b",
-            "sizeGB": 7.5,
+            "sizeGB": 8.1,
             "minRAM": 16,
-            "tier": 2,
-            "verticals": [
-                "general",
-                "research"
-            ],
-            "recommendedFor": [
-                "research"
-            ],
-            "description": "Long documents (128K context)."
+            "tier": 3,
+            "profile": "pro",
+            "verticals": ["legal", "general", "research"],
+            "recommendedFor": ["legal", "research"],
+            "description": "Pro quality for longer matters and multi-doc compare."
         },
         {
-            "id": "phi4:14b",
-            "name": "Phi-4 14B",
-            "pullCommand": "phi4:14b",
-            "sizeGB": 8.0,
-            "minRAM": 16,
-            "tier": 2,
-            "verticals": [
-                "general",
-                "consulting"
-            ],
-            "recommendedFor": [
-                "general"
-            ],
-            "description": "Strong reasoning, smaller footprint."
-        },
-        {
-            "id": "mistral:7b",
-            "name": "Mistral 7B",
-            "pullCommand": "mistral:7b",
-            "sizeGB": 4.1,
+            "id": "qwen3:4b",
+            "name": "Qwen3 4B",
+            "pullCommand": "qwen3:4b",
+            "sizeGB": 2.5,
             "minRAM": 8,
             "tier": 1,
-            "verticals": [
-                "general"
-            ],
-            "description": "Fast, good for lighter workloads."
+            "profile": "lite",
+            "advanced": true,
+            "verticals": ["legal", "general"],
+            "description": "Smaller 4B alternative with long context."
         },
         {
-            "id": "qwen2.5:32b",
-            "name": "Qwen 2.5 32B",
-            "pullCommand": "qwen2.5:32b",
-            "sizeGB": 19.0,
+            "id": "phi4-mini",
+            "name": "Phi-4 Mini",
+            "pullCommand": "phi4-mini",
+            "sizeGB": 2.5,
+            "minRAM": 8,
+            "tier": 1,
+            "profile": "lite",
+            "advanced": true,
+            "verticals": ["legal", "general", "consulting"],
+            "description": "Strong small reasoner for clause compare."
+        },
+        {
+            "id": "qwen3:8b",
+            "name": "Qwen3 8B",
+            "pullCommand": "qwen3:8b",
+            "sizeGB": 5.2,
+            "minRAM": 16,
+            "tier": 2,
+            "profile": "standard",
+            "advanced": true,
+            "verticals": ["legal", "general"],
+            "description": "Proven RAG instruction follower."
+        },
+        {
+            "id": "qwen3.5:27b",
+            "name": "Qwen3.5 27B",
+            "pullCommand": "qwen3.5:27b",
+            "sizeGB": 17.0,
             "minRAM": 32,
             "tier": 3,
-            "verticals": [
-                "general",
-                "research"
-            ],
-            "recommendedFor": [
-                "general"
-            ],
-            "description": "Near GPT-4 quality for power users."
+            "profile": "pro",
+            "advanced": true,
+            "verticals": ["legal", "general", "research"],
+            "description": "High-end drafting on 32GB+ machines."
         },
         {
             "id": "initium/law_model",
-            "name": "Law Model",
+            "name": "Law Model (community)",
             "pullCommand": "initium/law_model",
             "sizeGB": 4.1,
             "minRAM": 8,
             "tier": 1,
-            "verticals": [
-                "legal"
-            ],
-            "recommendedFor": [
-                "legal"
-            ],
-            "description": "Mistral 7B fine-tuned on legal statutes and case law corpus."
-        },
-        {
-            "id": "alibayram/medgemma:27b",
-            "name": "MedGemma 27B",
-            "pullCommand": "alibayram/medgemma:27b",
-            "sizeGB": 17.0,
-            "minRAM": 32,
-            "tier": 3,
-            "verticals": [
-                "medical"
-            ],
-            "description": "High-spec medical reasoning."
-        },
-        {
-            "id": "alibayram/medgemma:4b",
-            "name": "MedGemma 4B",
-            "pullCommand": "alibayram/medgemma:4b",
-            "sizeGB": 3.0,
-            "minRAM": 8,
-            "tier": 1,
-            "verticals": [
-                "medical"
-            ],
-            "recommendedFor": [
-                "medical"
-            ],
-            "description": "Outperforms base Gemma on health benchmarks."
-        },
-        {
-            "id": "lazarevtill/Medical-Llama3-8B",
-            "name": "Medical-Llama3-8B",
-            "pullCommand": "lazarevtill/Medical-Llama3-8B",
-            "sizeGB": 4.7,
-            "minRAM": 8,
-            "tier": 1,
-            "verticals": [
-                "medical"
-            ],
-            "description": "Fine-tuned on AI Medical Chatbot dataset."
-        },
-        {
-            "id": "vanilj/palmyra-fin-70b-32k",
-            "name": "Palmyra-Fin-70B",
-            "pullCommand": "vanilj/palmyra-fin-70b-32k",
-            "sizeGB": 40.0,
-            "minRAM": 64,
-            "tier": 3,
-            "verticals": [
-                "finance"
-            ],
-            "description": "Passed CFA Level III."
-        },
-        {
-            "id": "martain7r/finance-llama-8b",
-            "name": "Finance-Llama-8B",
-            "pullCommand": "martain7r/finance-llama-8b",
-            "sizeGB": 4.7,
-            "minRAM": 8,
-            "tier": 1,
-            "verticals": [
-                "finance"
-            ],
-            "recommendedFor": [
-                "finance"
-            ],
-            "description": "Fine-tuned on 500K finance examples."
-        },
-        {
-            "id": "0xroyce/plutus",
-            "name": "Plutus",
-            "pullCommand": "0xroyce/plutus",
-            "sizeGB": 4.7,
-            "minRAM": 8,
-            "tier": 1,
-            "verticals": [
-                "finance"
-            ],
-            "description": "Fine-tuned on 394 finance books."
+            "profile": "lite",
+            "advanced": true,
+            "verticals": ["legal"],
+            "description": "Optional community legal fine-tune. Still requires your documents for grounding."
         }
     ],
     "embeddingModel": {
