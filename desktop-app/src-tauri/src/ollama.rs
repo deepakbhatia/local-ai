@@ -90,6 +90,7 @@ pub async fn list_installed_models() -> Result<Vec<Value>, String> {
 #[derive(Serialize, Clone)]
 struct ProgressPayload {
     status: String,
+    digest: String,
     completed: u64,
     total: u64,
 }
@@ -120,17 +121,20 @@ pub async fn download_model(app: tauri::AppHandle, model_name: String) -> Result
                         if line.trim().is_empty() { continue; }
                         if let Ok(json) = serde_json::from_str::<Value>(line) {
                             let status = json.get("status").and_then(|s| s.as_str()).unwrap_or("").to_string();
+                            let digest = json.get("digest").and_then(|d| d.as_str()).unwrap_or("").to_string();
                             let completed = json.get("completed").and_then(|c| c.as_u64()).unwrap_or(0);
                             let total = json.get("total").and_then(|t| t.as_u64()).unwrap_or(0);
                             
                             let payload = ProgressPayload {
                                 status,
+                                digest,
                                 completed,
                                 total,
                             };
                             
                             // Emit event to frontend
-                            let _ = app.emit(&format!("download-progress-{}", model_name), payload);
+                            let safe_model_name = model_name.replace(|c: char| !c.is_ascii_alphanumeric() && c != '-', "-");
+                            let _ = app.emit(&format!("download-progress-{}", safe_model_name), payload);
                         }
                     }
                 }
@@ -140,6 +144,27 @@ pub async fn download_model(app: tauri::AppHandle, model_name: String) -> Result
     }
 
     Ok(true)
+}
+
+#[tauri::command]
+pub async fn delete_model(model_name: String) -> Result<bool, String> {
+    let client = reqwest::Client::new();
+    
+    let req_body = serde_json::json!({
+        "name": model_name
+    });
+
+    let res = client.delete("http://localhost:11434/api/delete")
+        .json(&req_body)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if res.status().is_success() {
+        Ok(true)
+    } else {
+        Err(format!("Failed to delete model. Status: {}", res.status()))
+    }
 }
 
 #[derive(Serialize, Clone)]
@@ -177,7 +202,7 @@ pub async fn generate_text(app: tauri::AppHandle, model_name: String, prompt: St
                 if let Ok(text) = String::from_utf8(bytes.to_vec()) {
                     for line in text.lines() {
                         if line.trim().is_empty() { continue; }
-                        if let Ok(mut json) = serde_json::from_str::<Value>(line) {
+                        if let Ok(json) = serde_json::from_str::<Value>(line) {
                             let response_text = json.get("response").and_then(|s| s.as_str()).unwrap_or("").to_string();
                             let done = json.get("done").and_then(|d| d.as_bool()).unwrap_or(false);
                             
@@ -200,7 +225,7 @@ pub async fn generate_text(app: tauri::AppHandle, model_name: String, prompt: St
 }
 
 #[tauri::command]
-pub async fn generate_text_sync(app: tauri::AppHandle, model_name: String, prompt: String, context: Option<Vec<u64>>) -> Result<String, String> {
+pub async fn generate_text_sync(_app: tauri::AppHandle, model_name: String, prompt: String, context: Option<Vec<u64>>) -> Result<String, String> {
     let client = reqwest::Client::new();
     
     let mut req_body = serde_json::json!({

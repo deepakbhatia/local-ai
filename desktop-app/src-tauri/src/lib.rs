@@ -34,6 +34,31 @@ fn stub_query_document(query: &str, collection_id: &str) -> String {
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
+            // Setup local crash reporter
+            let app_data_dir = app.path().app_data_dir().unwrap_or_default();
+            std::fs::create_dir_all(&app_data_dir).unwrap_or_default();
+            
+            std::panic::set_hook(Box::new(move |panic_info| {
+                let log_path = app_data_dir.join("crash.log");
+                let mut file = std::fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(log_path)
+                    .unwrap();
+                    
+                let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
+                let message = if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
+                    *s
+                } else if let Some(s) = panic_info.payload().downcast_ref::<String>() {
+                    &s[..]
+                } else {
+                    "Unknown panic"
+                };
+                
+                let location = panic_info.location().map(|l| format!("at {}:{}", l.file(), l.line())).unwrap_or_default();
+                let _ = std::io::Write::write_all(&mut file, format!("[{}] CRASH: {} {}\n", timestamp, message, location).as_bytes());
+            }));
+
             let quit_i = MenuItem::with_id(app, "quit", "Quit LocalMind", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&quit_i])?;
             
@@ -65,6 +90,8 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_sql::Builder::default().build())
         .plugin(tauri_plugin_opener::init())
         .manage(ollama::OllamaState::default())
@@ -80,6 +107,7 @@ pub fn run() {
             ollama::check_ollama_status,
             ollama::list_installed_models,
             ollama::download_model,
+            ollama::delete_model,
             ollama::generate_text,
             ollama::generate_text_sync,
             ollama::embed_text,
