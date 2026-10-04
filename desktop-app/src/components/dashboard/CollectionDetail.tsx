@@ -99,28 +99,33 @@ export const CollectionDetail: React.FC<Props> = ({ collectionId, onBack }) => {
             addDocument(collectionId, docEntry);
 
             try {
+                updateDocumentStatus(collectionId, tempId, 'Processing...');
+                let rawText: string | undefined;
                 if (filePath.toLowerCase().endsWith('.docx')) {
                     updateDocumentStatus(collectionId, tempId, 'Extracting DOCX...');
                     const bytes = await readFile(filePath);
-                    await mammoth.extractRawText({ arrayBuffer: bytes.buffer });
-                    updateDocumentStatus(collectionId, tempId, 'Indexed ✓');
-                } else {
-                    updateDocumentStatus(collectionId, tempId, 'Processing...');
-                    const result = await invoke<{ id: string; chunk_count: number }>('process_and_index_document', {
-                        collectionId,
-                        filePath,
-                        embeddingModel: 'nomic-embed-text'
-                    });
-                    // Replace the temp entry with the real doc_id
-                    removeDocument(collectionId, tempId);
-                    addDocument(collectionId, {
-                        id: result.id,
-                        name,
-                        path: filePath,
-                        status: 'Indexed ✓',
-                        addedAt: Date.now(),
-                    });
+                    const extracted = await mammoth.extractRawText({ arrayBuffer: bytes.buffer as ArrayBuffer });
+                    rawText = extracted.value?.trim();
+                    if (!rawText) {
+                        throw new Error('DOCX contained no extractable text');
+                    }
                 }
+
+                const result = await invoke<{ id: string; chunk_count: number }>('process_and_index_document', {
+                    collectionId,
+                    filePath,
+                    embeddingModel: 'nomic-embed-text',
+                    rawText: rawText ?? null,
+                    displayFilename: name,
+                });
+                removeDocument(collectionId, tempId);
+                addDocument(collectionId, {
+                    id: result.id,
+                    name,
+                    path: filePath,
+                    status: 'Indexed ✓',
+                    addedAt: Date.now(),
+                });
             } catch (e: any) {
                 console.error('Processing error:', e);
                 updateDocumentStatus(collectionId, tempId, 'Error');
